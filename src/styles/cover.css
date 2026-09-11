@@ -1,0 +1,112 @@
+.book-object {
+  --cover-bg: #235347;
+  --cover-ink: #efe8d5;
+  --cover-accent: #c8d4a0;
+  position: relative;
+  width: 260px;
+  aspect-ratio: 0.708;
+  isolation: isolate;
+  container-type: inline-size;
+  transform-style: preserve-3d;
+  color: var(--cover-ink);
+  font-family: Georgia, 'Songti SC', 'Noto Serif CJK SC', STSong, SimSun, serif;
+  text-align: left;
+  flex-shrink: 0;
+}
+.book-front {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--cover-bg);
+  border-radius: 1px 3px 3px 1px;
+  padding: 24px 22px 20px 27px;
+  box-shadow:
+    inset 1px 0 2px #ffffff24,
+    inset 5px 0 7px #00000016,
+    inset 8px 0 1px #ffffff13,
+    1px 1px 1px #0000001a,
+    10px 18px 22px -9px #27282045;
+  overflow: hidden;
+}
+.book-front:before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' opacity='.18' filter='url(%23n)'/%3E%3C/svg%3E");
+  opacity: 0.2;
+  mix-blend-mode: soft-light;
+}
+.book-front:after {
+  content: '';
+  position: absolute;
+  left: 11px;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: #0000001b;
+  box-shadow: 1px 0 1px #ffffff18;
+}
+.book-pages {
+  position: absolute;
+  right: -7px;
+  top: 3px;
+  width: 12px;
+  height: calc(100% - 5px);
+  transform: skewY(-20deg);
+  background: repeating-linear-gradient(90deg, #e8e3d6 0px, #e8e3d6 1px, #c4beb0 1px, #f8f4e7 2px);
+  border-radius: 0 3px 3px 0;
+  box-shadow: 2px 1px 2px #00000015;
+  z-index: -1;
+}
+.cover-heading {
+  margin-top: 21px;
+  position: relative;
+  z-index: 1;
+}
+.cover-heading h3 {
+  margin: 0;
+  font-family: Georgia, 'Songti SC', 'Noto Serif CJK SC', STSong, SimSun, serif;
+  font-weight: 500;
+  font-size: 29px;
+  line-height: 1.5;
+  letter-spacing: 0.5px;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+}
+.cover-heading p {
+  font-size: 9px;
+  line-height: 1.8;
+  margin: 11px 0 0;
+  max-width: 185px;
+  opacity: 0.74;
+  letter-spacing: 0.6px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.cover-motif {
+  display: block;
+  width: 100%;
+  min-height: 0;
+  flex: 1;
+  max-height: 188px;
+  color: var(--cover-accent);
+  opacity: 0.77;
+  margin-top: 10px;
+  margin-bottom: 6px;
+}
+
+.cover-heading {
+  margin-top: 26px;
+}
+.cover-motif {
+  flex: 0 1 46%;
+  height: 46%;
+  max-height: none;
+  margin-top: auto;
+  margin-bottom: 8px;
+}
