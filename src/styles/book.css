@@ -101,6 +101,29 @@ a {
 .collection-count > span {
   margin: 0 9px;
 }
+.article-group {
+  margin: 0;
+}
+.article-group + .article-group {
+  margin-top: 34px;
+}
+.article-group-title {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 0 0 26px;
+  color: #7a8076;
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+}
+.article-group-title::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: currentColor;
+  opacity: 0.25;
+}
 .article-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -238,6 +261,7 @@ a.article-cover-link:hover .notebook-cover {
 }
 .is-entering .collection-header,
 .is-entering .collection-count,
+.is-entering .article-group-title,
 .is-entering .article-card,
 .is-entering .article-card:nth-child(-n + 4) .notebook-front h2,
 .is-entering .article-card:nth-child(-n + 4) .article-introduction,

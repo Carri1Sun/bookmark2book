@@ -1001,6 +1001,10 @@ a {
   cursor: pointer;
   margin: 0;
 }
+.checkbox:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
 .bookmark-list {
   overflow: auto;
   max-height: 425px;
@@ -1077,6 +1081,15 @@ a {
   text-decoration: none;
   color: #9caf89;
   padding: 3px;
+}
+.bookmark-included {
+  font-style: normal;
+  font-size: 8px;
+  color: #6f8460;
+  background: #e6ecd8;
+  border-radius: 999px;
+  padding: 3px 8px;
+  flex-shrink: 0;
 }
 .source-footer {
   border-top: 1px solid #dfe6d0;
@@ -3159,6 +3172,21 @@ a {
 .article-review-fields {
   flex: 1;
   min-width: 0;
+}
+.article-folder-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  font-size: 11px;
+  color: #7d8a73;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .article-review-fields > input {
   width: 100%;

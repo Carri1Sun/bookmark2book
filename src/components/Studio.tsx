@@ -33,11 +33,13 @@ const workingStatuses = ['extracting', 'analyzing', 'outlining', 'writing'];
 function CheckBox({
   checked,
   mixed = false,
+  disabled = false,
   onChange,
   label,
 }: {
   checked: boolean;
   mixed?: boolean;
+  disabled?: boolean;
   onChange: () => void;
   label: string;
 }) {
@@ -51,32 +53,36 @@ function CheckBox({
       className="checkbox"
       type="checkbox"
       checked={checked}
+      disabled={disabled}
       onChange={onChange}
+      title={disabled ? '已随上级文件夹收录' : undefined}
       aria-label={label}
     />
   );
 }
 function FolderBranch({
   node,
-  selected,
-  toggle,
+  selectedFolders,
+  toggleFolder,
   active,
   onActivate,
   onSelectFolder,
+  ancestorSelected = false,
   depth = 0,
 }: {
   node: BookmarkNode;
-  selected: Set<string>;
-  toggle: (ids: string[]) => void;
+  selectedFolders: Set<string>;
+  toggleFolder: (node: BookmarkNode) => void;
   active: string;
   onActivate: (id: string) => void;
   onSelectFolder: (node: BookmarkNode) => void;
+  ancestorSelected?: boolean;
   depth?: number;
 }) {
   const [open, setOpen] = useState(true);
   if (node.url) return null;
+  const included = selectedFolders.has(node.id) || ancestorSelected;
   const ids = flattenBookmarks([node]).map((item) => item.id);
-  const count = ids.filter((id) => selected.has(id)).length;
   const children = node.children?.filter((child) => !child.url) || [];
   return (
     <>
@@ -96,11 +102,11 @@ function FolderBranch({
           <span className="tree-spacer" />
         )}
         <CheckBox
-          checked={ids.length > 0 && count === ids.length}
-          mixed={count > 0 && count < ids.length}
+          checked={included}
+          disabled={ancestorSelected}
           onChange={() => {
-            toggle(ids);
-            if (count !== ids.length) onSelectFolder(node);
+            toggleFolder(node);
+            if (!included) onSelectFolder(node);
           }}
           label={`选择文件夹 ${node.title}`}
         />
@@ -115,11 +121,12 @@ function FolderBranch({
           <FolderBranch
             key={child.id}
             node={child}
-            selected={selected}
-            toggle={toggle}
+            selectedFolders={selectedFolders}
+            toggleFolder={toggleFolder}
             active={active}
             onActivate={onActivate}
             onSelectFolder={onSelectFolder}
+            ancestorSelected={included}
             depth={depth + 1}
           />
         ))}
@@ -149,7 +156,7 @@ export function Studio({
   const [mode, setMode] = useState<SourceMode>('browser');
   const [readingBookmarks, setReadingBookmarks] = useState(isExtension);
   const [nodes, setNodes] = useState<BookmarkNode[]>([]);
-  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [selectedFolders, setSelectedFolders] = useState<Set<string>>(new Set());
   const [activeFolder, setActiveFolder] = useState('all');
   const [search, setSearch] = useState('');
   const [links, setLinks] = useState('');
@@ -171,23 +178,33 @@ export function Studio({
       ),
     [all, activeNode, search],
   );
-  const picked = useMemo(
-    () => deduplicateBookmarks(all.filter((item) => selected.has(item.id))),
-    [all, selected],
-  );
-  const selectedVisible = visible.filter((item) => selected.has(item.id)).length;
+  const picked = useMemo(() => {
+    const roots: BookmarkNode[] = [];
+    const walk = (list: BookmarkNode[]) => {
+      for (const node of list) {
+        if (node.url) continue;
+        if (selectedFolders.has(node.id)) roots.push(node);
+        else walk(node.children || []);
+      }
+    };
+    walk(nodes);
+    return deduplicateBookmarks(flattenBookmarks(roots));
+  }, [nodes, selectedFolders]);
+  const pickedIds = useMemo(() => new Set(picked.map((item) => item.id)), [picked]);
 
   function useNodes(data: BookmarkNode[], selectAll = false) {
     setNodes(data);
-    setSelected(new Set(selectAll ? flattenBookmarks(data).map((item) => item.id) : []));
+    setSelectedFolders(
+      new Set(selectAll ? data.filter((node) => !node.url).map((node) => node.id) : []),
+    );
     setActiveFolder('all');
     setSearch('');
   }
-  function toggle(ids: string[]) {
-    setSelected((previous) => {
+  function toggleFolder(node: BookmarkNode) {
+    setSelectedFolders((previous) => {
       const next = new Set(previous);
-      const remove = ids.every((id) => next.has(id));
-      ids.forEach((id) => (remove ? next.delete(id) : next.add(id)));
+      if (next.has(node.id)) next.delete(node.id);
+      else next.add(node.id);
       return next;
     });
   }
@@ -347,6 +364,10 @@ export function Studio({
     setOutline(null);
     setError('');
   }
+  const folderById = useMemo(
+    () => new Map((job?.sources || []).map((source) => [source.id, source.folder] as const)),
+    [job],
+  );
   const step = !job
     ? 1
     : job.status === 'outline_ready'
@@ -374,7 +395,7 @@ export function Studio({
         <>
           <div className="studio-intro">
             <h1>添加文集</h1>
-            <p>选择一个收藏夹或其中的文章，整理为一本文集。</p>
+            <p>勾选一个收藏夹作为根目录，其中的文章与子文件夹都会收录进同一本文集。</p>
           </div>
           <div className="studio-grid">
             <section className="source-panel">
@@ -442,7 +463,7 @@ export function Studio({
                     <p>
                       {isExtension
                         ? '添加浏览器书签后重新打开，也可以粘贴文章链接。'
-                        : '安装拾页扩展后，点击插件图标即可直接选择收藏夹。'}
+                        : '安装 Tabbit 文集扩展后，点击插件图标即可直接选择收藏夹。'}
                     </p>
                   )}
                   {!isExtension && (
@@ -481,8 +502,8 @@ export function Studio({
                           <FolderBranch
                             key={node.id}
                             node={node}
-                            selected={selected}
-                            toggle={toggle}
+                            selectedFolders={selectedFolders}
+                            toggleFolder={toggleFolder}
                             active={activeFolder}
                             onActivate={setActiveFolder}
                             onSelectFolder={(folder) => {
@@ -494,27 +515,14 @@ export function Studio({
                     </aside>
                     <div className="bookmark-list">
                       <div className="select-all-row">
-                        <CheckBox
-                          checked={visible.length > 0 && selectedVisible === visible.length}
-                          mixed={selectedVisible > 0 && selectedVisible < visible.length}
-                          onChange={() => toggle(visible.map((item) => item.id))}
-                          label="选择当前列表全部书签"
-                        />
-                        <span>选择此列表</span>
+                        <span>{activeNode ? '此文件夹内的文章' : '全部书签'}</span>
                         <small>{visible.length} 篇</small>
                       </div>
                       {visible.map((item) => (
-                        <label
+                        <div
                           key={item.id}
-                          className={`bookmark-row ${selected.has(item.id) ? 'selected' : ''}`}
+                          className={`bookmark-row ${pickedIds.has(item.id) ? 'selected' : ''}`}
                         >
-                          <input
-                            className="checkbox"
-                            type="checkbox"
-                            aria-label={`选择书签 ${item.title}`}
-                            checked={selected.has(item.id)}
-                            onChange={() => toggle([item.id])}
-                          />
                           <span className="bookmark-initial">
                             {new URL(item.url).hostname
                               .replace('www.', '')
@@ -525,6 +533,7 @@ export function Studio({
                             <strong>{item.title}</strong>
                             <small>{new URL(item.url).hostname}</small>
                           </span>
+                          {pickedIds.has(item.id) && <em className="bookmark-included">已收录</em>}
                           <a
                             href={item.url}
                             target="_blank"
@@ -534,15 +543,15 @@ export function Studio({
                           >
                             ↗
                           </a>
-                        </label>
+                        </div>
                       ))}
                       {!visible.length && <p className="no-search">没有找到匹配的书签。</p>}
                     </div>
                   </div>
                   <div className="source-footer">
                     <Check size={14} />
-                    <span>已选 {picked.length} 篇，重复链接自动合并</span>
-                    <button className="text-button" onClick={() => setSelected(new Set())}>
+                    <span>已收录 {picked.length} 篇，重复链接自动合并</span>
+                    <button className="text-button" onClick={() => setSelectedFolders(new Set())}>
                       清空选择
                     </button>
                   </div>
@@ -611,7 +620,7 @@ export function Studio({
                 ? '第一版每本最多 500 篇，请缩小选择范围。'
                 : picked.length
                   ? ''
-                  : '请至少选择一篇文章。'}
+                  : '请至少勾选一个文件夹。'}
             </p>
             <button
               className="button primary"
@@ -648,6 +657,11 @@ export function Studio({
                 {articles.map((article, index) => (
                   <article className="article-review-row" key={article.id}>
                     <div className="article-review-fields">
+                      {folderById.get(article.id) && (
+                        <small className="article-folder-tag">
+                          {folderById.get(article.id)}
+                        </small>
+                      )}
                       <input
                         aria-label={`第 ${index + 1} 篇文章标题`}
                         maxLength={500}
