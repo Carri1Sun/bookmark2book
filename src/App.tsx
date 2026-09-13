@@ -48,6 +48,7 @@ function Brand({ onClick }: { onClick: () => void }) {
         <i />
       </span>
       <span className="brand-name">Tabbit 文集</span>
+      <span className="brand-beta">Beta</span>
     </button>
   );
 }

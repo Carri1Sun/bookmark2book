@@ -188,6 +188,18 @@ a {
   background: var(--green);
   box-shadow: 0 4px var(--green);
 }
+.brand-beta {
+  font:
+    600 9px/1 'SFMono-Regular',
+    Consolas,
+    monospace;
+  letter-spacing: 1.2px;
+  color: var(--green);
+  border: 1px solid currentColor;
+  border-radius: 3px;
+  padding: 2.5px 5px 1.5px;
+  opacity: 0.75;
+}
 .brand-name {
   font: 500 27px/1.05 var(--serif);
   letter-spacing: 3px;
