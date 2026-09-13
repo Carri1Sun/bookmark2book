@@ -42,12 +42,12 @@ function currentView(): View {
 }
 function Brand({ onClick }: { onClick: () => void }) {
   return (
-    <button className="brand" onClick={onClick} aria-label="拾页，回到文集">
+    <button className="brand" onClick={onClick} aria-label="Tabbit 文集，回到文集首页">
       <span className="brand-symbol">
         <Bookmark size={26} strokeWidth={1.4} />
         <i />
       </span>
-      <span className="brand-name">拾页</span>
+      <span className="brand-name">Tabbit 文集</span>
     </button>
   );
 }

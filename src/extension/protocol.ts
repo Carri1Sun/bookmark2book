@@ -13,7 +13,7 @@ export async function sendExtensionMessage<T>(
   const message: ExtensionMessage = { channel: 'bookmark-press', target, method, input };
   const response = (await chrome.runtime.sendMessage(message)) as
     { ok: true; value: T } | { ok: false; error: string } | undefined;
-  if (!response) throw new Error('扩展未能响应，请重新打开拾页。');
+  if (!response) throw new Error('扩展未能响应，请重新打开 Tabbit 文集。');
   if (!response.ok) throw new Error(response.error);
   return response.value;
 }

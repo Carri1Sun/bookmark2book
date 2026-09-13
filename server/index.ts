@@ -74,7 +74,7 @@ app.post('/api/settings/test', async (req, res) =>
   ),
 );
 app.get('/api/extension', (_req, res) =>
-  res.download(path.join(rootDir, 'dist/bookmark-press-extension.zip'), '拾页.zip'),
+  res.download(path.join(rootDir, 'dist/bookmark-press-extension.zip'), 'Tabbit-文集.zip'),
 );
 app.get('/api/books', async (_req, res) =>
   res.json(

@@ -15,15 +15,15 @@ await build({
 });
 await fs.writeFile(
   `${out}/offscreen.html`,
-  '<!doctype html><html><head><meta charset="utf-8"><title>拾页</title></head><body><script type="module" src="./offscreen.js"></script></body></html>',
+  '<!doctype html><html><head><meta charset="utf-8"><title>Tabbit 文集</title></head><body><script type="module" src="./offscreen.js"></script></body></html>',
 );
 await fs.writeFile(
   `${out}/manifest.json`,
   JSON.stringify(
     {
       manifest_version: 3,
-      name: '拾页',
-      version: '0.2.0',
+      name: 'Tabbit 文集',
+      version: '0.3.0',
       minimum_chrome_version: '120',
       description: '将收藏夹中的文章整理为带文章封面与 AI 介绍的 HTML 文集。',
       permissions: ['bookmarks', 'storage', 'offscreen'],
@@ -32,7 +32,7 @@ await fs.writeFile(
       options_ui: { page: 'index.html?settings=1', open_in_tab: true },
       icons: { 16: 'icon-16.png', 32: 'icon-32.png', 48: 'icon-48.png', 128: 'icon-128.png' },
       action: {
-        default_title: '打开拾页',
+        default_title: '打开 Tabbit 文集',
         default_icon: { 16: 'icon-16.png', 32: 'icon-32.png' },
       },
       background: { service_worker: 'background.js', type: 'module' },

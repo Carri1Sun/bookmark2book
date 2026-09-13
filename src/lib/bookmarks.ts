@@ -100,7 +100,7 @@ export function parseBookmarkHtml(
 }
 export async function readBrowserBookmarks(): Promise<BookmarkNode[]> {
   if (!globalThis.chrome?.bookmarks?.getTree)
-    throw new Error('请在拾页浏览器扩展中读取收藏夹，网页无法直接读取浏览器书签。');
+    throw new Error('请在 Tabbit 文集浏览器扩展中读取收藏夹，网页无法直接读取浏览器书签。');
   const tree = await chrome.bookmarks.getTree();
   return tree.length === 1 && !tree[0]!.title ? tree[0]!.children || [] : tree;
 }

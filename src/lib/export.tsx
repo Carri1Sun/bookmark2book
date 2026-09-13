@@ -8,7 +8,7 @@ export function buildBookHtml(book: Book): string {
     /[&<>"']/g,
     (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]!,
   );
-  return `<!doctype html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:; font-src 'none'; base-uri 'none'; form-action 'none'"><title>${title} · 拾页</title><style>${coverStyles}\n${bookStyles}</style></head><body>${renderToStaticMarkup(<BookDocument book={book} />)}</body></html>`;
+  return `<!doctype html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:; font-src 'none'; base-uri 'none'; form-action 'none'"><title>${title} · Tabbit 文集</title><style>${coverStyles}\n${bookStyles}</style></head><body>${renderToStaticMarkup(<BookDocument book={book} />)}</body></html>`;
 }
 export function downloadBook(book: Book) {
   const blob = new Blob([buildBookHtml(book)], { type: 'text/html;charset=utf-8' });
