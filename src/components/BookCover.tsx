@@ -53,11 +53,13 @@ export function BookCover({
   title,
   palette = 'forest',
   variant = 0,
+  image,
   className = '',
 }: {
   title: string;
   palette?: Palette;
   variant?: number;
+  image?: string;
   className?: string;
 }) {
   const colors = palettes[palette];
@@ -79,6 +81,12 @@ export function BookCover({
     >
       <div className="book-pages" />
       <div className="book-front">
+        {image && (
+          <>
+            <img className="cover-photo" src={image} alt="" aria-hidden="true" />
+            <i className="cover-photo-scrim" aria-hidden="true" />
+          </>
+        )}
         <div className="cover-heading">
           <h3
             style={{
@@ -88,7 +96,7 @@ export function BookCover({
             {coverTitle}
           </h3>
         </div>
-        <CoverMotif variant={variant} />
+        {!image && <CoverMotif variant={variant} />}
       </div>
     </div>
   );

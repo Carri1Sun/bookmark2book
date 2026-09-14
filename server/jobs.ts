@@ -67,6 +67,7 @@ export async function createJob(input: z.infer<typeof createJobSchema>): Promise
     bookmarks,
     sources: [],
     palette: input.palette,
+    coverImage: input.coverImage,
     direction: input.direction,
     collectionTitle: input.collectionTitle,
     model: settings.model,
@@ -111,6 +112,7 @@ export async function writeBook(job: Job, outline: Outline, articles?: ArticleEd
     {
       id: crypto.randomUUID(),
       palette: job.palette,
+      coverImage: job.coverImage,
       createdAt: new Date().toISOString(),
       model: job.model || config.model,
     },

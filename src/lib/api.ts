@@ -49,17 +49,24 @@ export const api = {
     ];
     return chrome.permissions.request({ origins });
   },
-  create: (bookmarks: Bookmark[], palette: Palette, direction: string, collectionTitle?: string) =>
+  create: (
+    bookmarks: Bookmark[],
+    palette: Palette,
+    direction: string,
+    collectionTitle?: string,
+    coverImage?: string,
+  ) =>
     extensionContext
       ? sendExtensionMessage<Job>('background', 'jobs.create', {
           bookmarks,
           palette,
           direction,
           collectionTitle,
+          coverImage,
         })
       : request<Job>('/jobs', {
           method: 'POST',
-          body: JSON.stringify({ bookmarks, palette, direction, collectionTitle }),
+          body: JSON.stringify({ bookmarks, palette, direction, collectionTitle, coverImage }),
         }),
   job: async (id: string, signal?: AbortSignal) => {
     signal?.throwIfAborted();

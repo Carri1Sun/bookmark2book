@@ -24,7 +24,6 @@ import {
 } from './components/CollectionOpening';
 import { collectionArticles } from './lib/collection';
 import { Studio } from './components/Studio';
-import { extensionContext } from './extension/protocol';
 import { downloadBook } from './lib/export';
 import './styles/cover.css';
 const SettingsDialog = lazy(() =>
@@ -57,10 +56,8 @@ export default function App() {
   const [books, setBooks] = useState<Book[]>([]);
   const [loading, setLoading] = useState(true);
   const [health, setHealth] = useState<'checking' | 'ready' | 'offline' | 'missing'>('checking');
-  const [filter, setFilter] = useState<'all' | 'mine' | 'demo'>(extensionContext ? 'mine' : 'all');
   const [search, setSearch] = useState('');
   const [layout, setLayout] = useState<'grid' | 'list'>('grid');
-  const [guide, setGuide] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(
     new URLSearchParams(location.search).has('settings'),
   );
@@ -71,7 +68,6 @@ export default function App() {
     setOpening(null);
     document.querySelector<HTMLElement>('.collection-title')?.focus({ preventScroll: true });
   }, []);
-  const guideRef = useRef<HTMLDialogElement>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   async function refresh() {
     try {
@@ -103,10 +99,6 @@ export default function App() {
       clearTimeout(toastTimer.current);
     };
   }, []);
-  useEffect(() => {
-    if (guide) guideRef.current?.showModal();
-    else guideRef.current?.close();
-  }, [guide]);
   function navigate(next: View) {
     const url = new URL(location.href);
     url.search = '';
@@ -131,14 +123,12 @@ export default function App() {
   }
   const allBooks = [...books, ...demoBooks];
   const book = allBooks.find((item) => item.id === view.bookId);
-  const displayed = allBooks.filter(
-    (item) =>
-      (filter === 'all' || (filter === 'mine' ? !item.isDemo : item.isDemo)) &&
-      `${item.title} ${item.subtitle} ${item.theme}`.toLowerCase().includes(search.toLowerCase()),
+  const displayed = allBooks.filter((item) =>
+    `${item.title} ${item.subtitle} ${item.theme}`.toLowerCase().includes(search.toLowerCase()),
   );
-  function exportCurrent(current: Book) {
+  async function exportCurrent(current: Book) {
     try {
-      downloadBook(current);
+      await downloadBook(current);
       notice('已导出独立 HTML，离线也能阅读。');
     } catch {
       notice('导出失败，请重试。');
@@ -160,31 +150,58 @@ export default function App() {
         <>
           <header className="app-header page-width">
             <Brand onClick={() => navigate({ page: 'library' })} />
-            <nav className="main-nav" aria-label="主导航">
+            <div className="header-actions" role="group" aria-label="文集操作">
+              {view.page === 'library' && (
+                <>
+                  <label className="library-search">
+                    <Search size={16} aria-hidden="true" />
+                    <input
+                      placeholder="搜索文集"
+                      value={search}
+                      onChange={(event) => setSearch(event.target.value)}
+                      aria-label="搜索文集"
+                    />
+                    {search && (
+                      <button aria-label="清空搜索" onClick={() => setSearch('')}>
+                        <X size={14} />
+                      </button>
+                    )}
+                  </label>
+                  <button
+                    className="layout-toggle"
+                    role="switch"
+                    aria-label="列表视图"
+                    aria-checked={layout === 'list'}
+                    title={layout === 'grid' ? '切换为列表视图' : '切换为封面视图'}
+                    onClick={() => setLayout((current) => (current === 'grid' ? 'list' : 'grid'))}
+                  >
+                    <span className="layout-toggle-thumb" aria-hidden="true" />
+                    <Grid2X2 size={15} aria-hidden="true" />
+                    <List size={16} aria-hidden="true" />
+                  </button>
+                </>
+              )}
               <button
-                className={view.page === 'library' ? 'active' : ''}
-                onClick={() => navigate({ page: 'library' })}
-              >
-                文集
-              </button>
-              <button onClick={() => setGuide(true)}>使用说明</button>
-              <button
-                className="settings-entry"
+                className={`header-settings${health === 'offline' || health === 'missing' ? ' needs-attention' : ''}`}
                 aria-label="设置"
+                title={
+                  health === 'missing'
+                    ? '设置 · 配置 API Key'
+                    : health === 'offline'
+                      ? '设置 · 服务未连接'
+                      : '设置'
+                }
                 onClick={() => setSettingsOpen(true)}
               >
-                <Settings size={18} strokeWidth={1.6} />
+                <Settings size={19} strokeWidth={1.6} />
               </button>
-            </nav>
-            {(health === 'offline' || health === 'missing') && (
-              <button className="connection offline" onClick={() => setSettingsOpen(true)}>
-                {health === 'missing'
-                  ? '配置 API Key'
-                  : extensionContext
-                    ? '扩展连接中断'
-                    : '本地服务未连接'}
-              </button>
-            )}
+              {view.page === 'library' && (
+                <button className="button primary" onClick={() => navigate({ page: 'studio' })}>
+                  <Plus size={17} />
+                  添加
+                </button>
+              )}
+            </div>
           </header>
           {view.page === 'studio' ? (
             <Studio
@@ -193,7 +210,7 @@ export default function App() {
               onClose={() => navigate({ page: 'library' })}
               onComplete={async () => {
                 await refresh();
-                setFilter('mine');
+                setSearch('');
                 navigate({ page: 'library' });
                 notice('文集已添加到首页。');
               }}
@@ -217,70 +234,8 @@ export default function App() {
             </div>
           ) : (
             <main className="page-width">
-              <section className="library-section" id="library">
-                <div className="section-heading">
-                  <h1>我的文集</h1>
-                  <button className="button primary" onClick={() => navigate({ page: 'studio' })}>
-                    <Plus size={17} />
-                    添加
-                  </button>
-                </div>
-                <div className="library-toolbar">
-                  <div className="library-filters" role="tablist" aria-label="文集分类">
-                    {(
-                      [
-                        ['all', '全部'],
-                        ['mine', '已整理'],
-                        ['demo', '示例'],
-                      ] as const
-                    ).map(([value, label]) => (
-                      <button
-                        key={value}
-                        role="tab"
-                        aria-selected={filter === value}
-                        className={filter === value ? 'active' : ''}
-                        onClick={() => setFilter(value)}
-                      >
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-                  <div className="library-tools">
-                    <label className="library-search">
-                      <Search size={16} />
-                      <input
-                        placeholder="搜索文集"
-                        value={search}
-                        onChange={(event) => setSearch(event.target.value)}
-                        aria-label="搜索文集"
-                      />
-                      {search && (
-                        <button aria-label="清空搜索" onClick={() => setSearch('')}>
-                          <X size={14} />
-                        </button>
-                      )}
-                    </label>
-                    <div className="view-switch">
-                      <button
-                        className={layout === 'grid' ? 'active' : ''}
-                        onClick={() => setLayout('grid')}
-                        aria-label="封面视图"
-                        aria-pressed={layout === 'grid'}
-                      >
-                        <Grid2X2 size={17} />
-                      </button>
-                      <button
-                        className={layout === 'list' ? 'active' : ''}
-                        onClick={() => setLayout('list')}
-                        aria-label="列表视图"
-                        aria-pressed={layout === 'list'}
-                      >
-                        <List size={18} />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-                {error && filter === 'mine' && (
+              <section className="library-section" id="library" aria-label="文集">
+                {error && (
                   <div className="error-message" role="alert">
                     {error}
                     <button className="text-button" onClick={() => void refresh()}>
@@ -300,6 +255,7 @@ export default function App() {
                           title={item.title}
                           palette={item.palette}
                           variant={['forest', 'vermilion', 'sand', 'ink'].indexOf(item.palette)}
+                          image={item.coverImage}
                         />
                       </button>
                       <div className="book-card-info">
@@ -343,59 +299,6 @@ export default function App() {
           )}
         </>
       )}
-      <dialog
-        ref={guideRef}
-        className="guide-dialog"
-        onCancel={() => setGuide(false)}
-        onClick={(event) => {
-          if (event.target === event.currentTarget) setGuide(false);
-        }}
-      >
-        <div className="guide-content">
-          <button
-            className="icon-button close-guide"
-            onClick={() => setGuide(false)}
-            aria-label="关闭使用指南"
-          >
-            <X size={20} />
-          </button>
-          <h2>使用说明</h2>
-          <div className="guide-steps">
-            {[
-              ['1', '添加收藏', '在设置中填写 API Key，然后点击首页的添加，选择收藏夹或文章。'],
-              ['2', '确认文章', '查看每篇文章的 AI 介绍，可修改标题、介绍和排列顺序。'],
-              ['3', '保存文集', '文章以本子封面陈列，点击可阅读原文，也可以导出 HTML。'],
-            ].map(([number, title, text]) => (
-              <div key={number}>
-                <span>{number}</span>
-                <div>
-                  <h3>{title}</h3>
-                  <p>{text}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-          <div className="install-note">
-            <h3>安装插件</h3>
-            <p>
-              在 Chrome / Edge 扩展管理页打开「开发者模式」，加载项目中的 dist/extension
-              文件夹。点击插件图标即可使用，无需启动本地服务。
-            </p>
-          </div>
-          <p className="guide-privacy">
-            仅发送所选内容用于分析。插件中的密钥与文集保存在当前浏览器。
-          </p>
-          <button
-            className="button primary"
-            onClick={() => {
-              setGuide(false);
-              navigate({ page: 'studio' });
-            }}
-          >
-            添加文集
-          </button>
-        </div>
-      </dialog>
       {settingsOpen && (
         <Suspense fallback={null}>
           <SettingsDialog

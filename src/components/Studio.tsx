@@ -11,6 +11,7 @@ import {
   CircleCheck,
   Folder,
   Globe,
+  ImagePlus,
   Link,
   LoaderCircle,
   Search,
@@ -26,6 +27,7 @@ import {
   readBrowserBookmarks,
 } from '../lib/bookmarks';
 import { sampleNodes } from '../lib/demo';
+import { fileToCoverDataUrl } from '../lib/image';
 import { BookCover, palettes } from './BookCover';
 
 type SourceMode = 'browser' | 'links' | 'sample';
@@ -163,6 +165,7 @@ export function Studio({
   const [palette, setPalette] = useState<Palette>('forest');
   const [direction, setDirection] = useState('');
   const [collectionTitle, setCollectionTitle] = useState('');
+  const [coverImage, setCoverImage] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [job, setJob] = useState<Job | null>(null);
@@ -245,6 +248,7 @@ export function Studio({
           setPalette(draft.palette);
           setDirection(draft.direction);
           setCollectionTitle(draft.collectionTitle || '');
+          setCoverImage(draft.coverImage || '');
           setOutline(draft.outline || null);
           setArticles(
             draft.sources.map(({ id, title, summary }) => ({ id, title, summary: summary || '' })),
@@ -303,7 +307,13 @@ export function Studio({
     try {
       if (!(await api.allowSites(picked.map((bookmark) => bookmark.url))))
         throw new Error('未获得所选网页的访问权限，请允许读取后重试。');
-      const next = await api.create(picked, palette, direction, collectionTitle);
+      const next = await api.create(
+        picked,
+        palette,
+        direction,
+        collectionTitle,
+        coverImage || undefined,
+      );
       setJob(next);
       localStorage.setItem('bookmark-press-draft', next.id);
     } catch (e) {
@@ -394,8 +404,7 @@ export function Studio({
       {!job ? (
         <>
           <div className="studio-intro">
-            <h1>添加文集</h1>
-            <p>勾选一个收藏夹作为根目录，其中的文章与子文件夹都会收录进同一本文集。</p>
+            <p>选择一个收藏夹中的文件夹创建为文集</p>
           </div>
           <div className="studio-grid">
             <section className="source-panel">
@@ -564,34 +573,63 @@ export function Studio({
                   title={collectionTitle || '封面预览'}
                   palette={palette}
                   variant={Object.keys(palettes).indexOf(palette)}
+                  image={coverImage || undefined}
                 />
               </div>
               <label className="collection-name-field">
-                文集名称
+                文集名称 <span>选填</span>
                 <input
                   value={collectionTitle}
                   maxLength={60}
-                  placeholder="留空由 AI 拟定"
+                  placeholder="不填则由 AI 代拟"
                   onChange={(event) => setCollectionTitle(event.target.value)}
                 />
               </label>
               <fieldset className="palette-field">
-                <legend>封面颜色</legend>
+                <legend>封面</legend>
                 <div className="palette-options">
                   {Object.entries(palettes).map(([value, color]) => (
                     <button
                       key={value}
-                      className={palette === value ? 'selected' : ''}
+                      className={!coverImage && palette === value ? 'selected' : ''}
                       style={{ background: color.background, color: color.ink }}
-                      onClick={() => setPalette(value as Palette)}
-                      aria-label={color.name}
-                      title={color.name}
-                      aria-pressed={palette === value}
+                      onClick={() => {
+                        setPalette(value as Palette);
+                        setCoverImage('');
+                      }}
+                      aria-label={`${color.name}预置封面`}
+                      title={`${color.name}预置封面`}
+                      aria-pressed={!coverImage && palette === value}
                     >
-                      {palette === value && <Check size={15} />}
+                      {!coverImage && palette === value && <Check size={15} />}
                     </button>
                   ))}
-                  <span>{palettes[palette].name}</span>
+                  <label
+                    className={`cover-image-button${coverImage ? ' selected' : ''}`}
+                    title={coverImage ? '已选择图片封面，点击更换' : '选择图片作为封面'}
+                  >
+                    {coverImage ? (
+                      <Check size={13} aria-hidden="true" />
+                    ) : (
+                      <ImagePlus size={13} aria-hidden="true" />
+                    )}
+                    图片
+                    <input
+                      type="file"
+                      accept="image/*"
+                      aria-label={coverImage ? '更换封面图片' : '选择封面图片'}
+                      onChange={async (event) => {
+                        const file = event.target.files?.[0];
+                        event.target.value = '';
+                        if (!file) return;
+                        try {
+                          setCoverImage(await fileToCoverDataUrl(file));
+                        } catch (e) {
+                          setError((e as Error).message);
+                        }
+                      }}
+                    />
+                  </label>
                 </div>
               </fieldset>
               <label className="direction-field">
@@ -603,10 +641,6 @@ export function Studio({
                   placeholder="例如：比较这些文章对产品设计的不同观点。"
                 />
               </label>
-              <div className="privacy-note">
-                <BookOpen size={14} />
-                <p>仅发送所选内容用于分析，不修改原始书签。</p>
-              </div>
             </aside>
           </div>
           {error && (
@@ -658,9 +692,7 @@ export function Studio({
                   <article className="article-review-row" key={article.id}>
                     <div className="article-review-fields">
                       {folderById.get(article.id) && (
-                        <small className="article-folder-tag">
-                          {folderById.get(article.id)}
-                        </small>
+                        <small className="article-folder-tag">{folderById.get(article.id)}</small>
                       )}
                       <input
                         aria-label={`第 ${index + 1} 篇文章标题`}
@@ -725,7 +757,7 @@ export function Studio({
               </div>
             </section>
             <aside className="outline-preview">
-              <BookCover title={outline.title} palette={palette} />
+              <BookCover title={outline.title} palette={palette} image={coverImage || undefined} />
               <div className="source-report">
                 <h3>素材阅读情况</h3>
                 {job.sources.map((source) => (

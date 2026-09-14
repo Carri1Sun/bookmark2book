@@ -33,9 +33,14 @@ export function BookDocument({
               <ArrowLeft size={21} strokeWidth={1.5} />
             </button>
           )}
-          <h1 className="collection-title" tabIndex={-1}>
-            {book.title.replace(/\n/g, '')}
-          </h1>
+          <div className="collection-heading">
+            <h1 className="collection-title" tabIndex={-1}>
+              {book.title.replace(/\n/g, '')}
+            </h1>
+            <p className="collection-count">
+              {articles.length} 篇文章 <span>·</span> {book.isDemo ? '内置示例' : '简介由 AI 整理'}
+            </p>
+          </div>
           {onExport && (
             <button className="collection-export" onClick={onExport} aria-label="导出 HTML">
               <Download size={16} />
@@ -45,9 +50,6 @@ export function BookDocument({
         </div>
       </header>
       <div className="collection-content">
-        <p className="collection-count">
-          {articles.length} 篇文章 <span>·</span> {book.isDemo ? '内置示例' : '简介由 AI 整理'}
-        </p>
         {numbered.map(({ group, start }) => (
           <section className="article-group" key={group.folder || 'articles'}>
             {group.folder && <h2 className="article-group-title">{group.folder}</h2>}
@@ -70,12 +72,8 @@ export function BookDocument({
                     </div>
                   )}
                   <p className="article-introduction">{article.introduction}</p>
-                  {article.status && article.status !== 'full' && (
-                    <p className="article-source-note">
-                      {article.status === 'excerpt'
-                        ? '介绍基于正文节选'
-                        : '未获取正文，介绍仅供参考'}
-                    </p>
+                  {article.status === 'excerpt' && (
+                    <p className="article-source-note">介绍基于正文节选</p>
                   )}
                   {article.url && (
                     <a

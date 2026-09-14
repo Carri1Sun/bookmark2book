@@ -98,3 +98,7 @@ pnpm smoke:extension   # 独立测试扩展任务引擎，无需启动本地服�
 ```
 
 扩展引擎测试在 Node 中用 DOM 与 IndexedDB 测试实现验证业务流程；浏览器网页测试验证选择、设置和阅读界面。Chrome 原生安装、权限弹窗、service worker 与 offscreen 的协作还需要加载扩展进行验证。
+
+## 字体
+
+界面使用随扩展打包的 IBM Plex Sans、IBM Plex Sans SC，以及用于等宽文字的 IBM Plex Mono，包含 Regular 和 Medium 字重。字体来源与 OFL 授权位于 `public/fonts/`。导出的独立 HTML 会内嵌字体与授权，离线也能保持排版；完整中英文字库会使每份导出文件增加约 11 MB。

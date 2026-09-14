@@ -4,9 +4,8 @@
   --muted: #898a80;
   --green: #235347;
   --line: #dcded2;
-  --serif: Georgia, 'Songti SC', 'Noto Serif CJK SC', STSong, SimSun, serif;
-  --sans:
-    -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --sans: 'IBM Plex Sans', 'IBM Plex Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --mono: 'IBM Plex Mono', 'IBM Plex Sans SC', monospace;
 }
 * {
   box-sizing: border-box;
@@ -59,8 +58,20 @@ a {
   border: 0;
   cursor: pointer;
 }
+.collection-heading {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 18px;
+  min-width: 0;
+}
+.collection-heading .collection-title {
+  max-width: 100%;
+  flex: 0 1 auto;
+}
 .collection-title {
-  font: 500 28px/1.4 var(--serif);
+  font: 500 28px/1.4 var(--sans);
   margin: 0;
   overflow-wrap: anywhere;
   text-wrap: balance;
@@ -93,7 +104,8 @@ a {
   padding: 36px 0 90px;
 }
 .collection-count {
-  margin: 0 0 47px;
+  margin: 0;
+  white-space: nowrap;
   color: #7a8076;
   font-size: 14px;
   line-height: 1.8;
@@ -180,7 +192,7 @@ a.article-cover-link:hover .notebook-cover {
   z-index: 2;
   color: var(--notebook-ink);
   background: var(--notebook-paper);
-  border-radius: 2px 9px 9px 2px;
+  border-radius: 2px 6px 6px 2px;
   padding: 15% 12% 13% 16%;
   box-shadow:
     inset 1px 0 0 #ffffff65,
@@ -210,7 +222,7 @@ a.article-cover-link:hover .notebook-cover {
 .notebook-front h2 {
   margin: 0;
   position: relative;
-  font: 500 9.5cqw/1.65 var(--serif);
+  font: 500 9.5cqw/1.65 var(--sans);
   overflow-wrap: anywhere;
   text-wrap: pretty;
 }
@@ -227,7 +239,7 @@ a.article-cover-link:hover .notebook-cover {
   position: absolute;
   inset: 4px -3px -3px 3px;
   border: 1px solid #d6d3c6;
-  border-radius: 1px 9px 9px 1px;
+  border-radius: 1px 6px 6px 1px;
   background: repeating-linear-gradient(0deg, #edeadf 0 1px, #f8f6ee 1px 3px);
   box-shadow: 2px 4px 3px #3c3c2a0b;
 }
@@ -318,7 +330,7 @@ a.article-cover-link:hover .notebook-cover {
   inset: 3px 0;
   background: #f9f6ee;
   border: 1px solid #dad9c8;
-  border-radius: 1px 4px 4px 1px;
+  border-radius: 1px 6px 6px 1px;
   transform-origin: 0 50%;
   box-shadow: 3px 10px 18px #32332913;
 }
@@ -428,8 +440,7 @@ a.article-cover-link:hover .notebook-cover {
     padding-top: 40px;
   }
   .collection-count {
-    margin-bottom: 34px;
-    font-size: 13px;
+    font-size: 12px;
   }
   .article-grid {
     grid-template-columns: 1fr;

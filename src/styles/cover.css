@@ -9,7 +9,7 @@
   container-type: inline-size;
   transform-style: preserve-3d;
   color: var(--cover-ink);
-  font-family: Georgia, 'Songti SC', 'Noto Serif CJK SC', STSong, SimSun, serif;
+  font-family: var(--sans);
   text-align: left;
   flex-shrink: 0;
 }
@@ -19,7 +19,7 @@
   display: flex;
   flex-direction: column;
   background: var(--cover-bg);
-  border-radius: 1px 3px 3px 1px;
+  border-radius: 1px 6px 6px 1px;
   padding: 24px 22px 20px 27px;
   box-shadow:
     inset 1px 0 2px #ffffff24,
@@ -56,7 +56,7 @@
   height: calc(100% - 5px);
   transform: skewY(-20deg);
   background: repeating-linear-gradient(90deg, #e8e3d6 0px, #e8e3d6 1px, #c4beb0 1px, #f8f4e7 2px);
-  border-radius: 0 3px 3px 0;
+  border-radius: 0 6px 6px 0;
   box-shadow: 2px 1px 2px #00000015;
   z-index: -1;
 }
@@ -67,7 +67,7 @@
 }
 .cover-heading h3 {
   margin: 0;
-  font-family: Georgia, 'Songti SC', 'Noto Serif CJK SC', STSong, SimSun, serif;
+  font-family: var(--sans);
   font-weight: 500;
   font-size: 29px;
   line-height: 1.5;
@@ -109,4 +109,26 @@
   max-height: none;
   margin-top: auto;
   margin-bottom: 8px;
+}
+
+.cover-photo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.cover-photo-scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    rgba(20, 26, 20, 0.05) 0%,
+    rgba(20, 26, 20, 0.12) 45%,
+    rgba(20, 26, 20, 0.68) 100%
+  );
+}
+.cover-photo ~ .cover-heading h3 {
+  color: #fdfaf0;
+  text-shadow: 0 1px 8px rgba(20, 26, 20, 0.45);
 }

@@ -73,6 +73,7 @@ export interface Book {
   description: string;
   theme: string;
   palette: Palette;
+  coverImage?: string;
   createdAt: string;
   chapters: Chapter[];
   sources: Source[];
@@ -98,6 +99,7 @@ export interface Job {
   bookmarks: Bookmark[];
   sources: Source[];
   palette: Palette;
+  coverImage?: string;
   direction: string;
   collectionTitle?: string;
   model?: string;
@@ -108,6 +110,11 @@ export interface Job {
 export const createJobSchema = z.object({
   bookmarks: z.array(bookmarkSchema).min(1).max(500),
   palette: paletteSchema.default('forest'),
+  coverImage: z
+    .string()
+    .max(1_500_000, '封面图片过大，请换一张。')
+    .refine((value) => value.startsWith('data:image/'), '封面图片格式不受支持。')
+    .optional(),
   direction: z.string().max(1000).default(''),
   collectionTitle: z.string().trim().max(60).optional(),
 });

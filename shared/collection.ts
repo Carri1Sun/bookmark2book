@@ -1,7 +1,7 @@
 import { publicSource, type ArticleEdit, type Book, type Outline, type Source } from './types';
 
 export function assembleCollection(
-  metadata: Pick<Book, 'id' | 'createdAt' | 'palette' | 'model'>,
+  metadata: Pick<Book, 'id' | 'createdAt' | 'palette' | 'coverImage' | 'model'>,
   outline: Outline,
   sources: Source[],
   articles?: ArticleEdit[],
