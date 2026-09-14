@@ -1,5 +1,6 @@
 :root {
   --paper: #f5f3ec;
+  --header-background: rgba(245, 243, 236, 0.92);
   --ink: #292f29;
   --muted: #898a80;
   --green: #235347;
@@ -28,13 +29,22 @@ a {
   color: var(--ink);
   font-family: var(--sans);
 }
+.fixed-header {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 40;
+}
+.fixed-header .collection-header {
+  position: relative;
+}
 .collection-header {
   position: sticky;
   inset: 0 0 auto;
   z-index: 40;
-  background: #f5f3ecf5;
+  background: var(--header-background);
   border-bottom: 1px solid var(--line);
-  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
 }
 .collection-header-inner {
   min-height: 92px;
@@ -476,6 +486,12 @@ a.article-cover-link:hover .notebook-cover {
   }
 }
 @media print {
+  .fixed-header {
+    position: static;
+  }
+  .fixed-header-spacer {
+    display: none;
+  }
   body,
   .collection-document {
     background: white;
@@ -484,6 +500,7 @@ a.article-cover-link:hover .notebook-cover {
   .collection-header {
     position: static;
     background: white;
+    -webkit-backdrop-filter: none;
     backdrop-filter: none;
   }
   .collection-header-inner,

@@ -23,7 +23,7 @@ await fs.writeFile(
     {
       manifest_version: 3,
       name: 'Tabbit 文集',
-      version: '0.3.13',
+      version: '0.3.20',
       minimum_chrome_version: '120',
       description: '将收藏夹中的文章整理为带文章封面与 AI 介绍的 HTML 文集。',
       permissions: ['bookmarks', 'storage', 'offscreen'],

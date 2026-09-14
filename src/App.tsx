@@ -16,6 +16,7 @@ import type { Book } from '../shared/types';
 import { api } from './lib/api';
 import { demoBooks } from './lib/demo';
 import { BookCover } from './components/BookCover';
+import { FixedHeader } from './components/FixedHeader';
 import { BookDocument } from './components/BookDocument';
 import {
   captureOpening,
@@ -148,61 +149,67 @@ export default function App() {
         </>
       ) : (
         <>
-          <header className="app-header page-width">
-            <Brand onClick={() => navigate({ page: 'library' })} />
-            <div className="header-actions" role="group" aria-label="文集操作">
-              {view.page === 'library' && (
-                <>
-                  <label className="library-search">
-                    <Search size={16} aria-hidden="true" />
-                    <input
-                      placeholder="搜索文集"
-                      value={search}
-                      onChange={(event) => setSearch(event.target.value)}
-                      aria-label="搜索文集"
-                    />
-                    {search && (
-                      <button aria-label="清空搜索" onClick={() => setSearch('')}>
-                        <X size={14} />
+          <FixedHeader>
+            <div className="app-header-shell">
+              <header className="app-header page-width">
+                <Brand onClick={() => navigate({ page: 'library' })} />
+                <div className="header-actions" role="group" aria-label="文集操作">
+                  {view.page === 'library' && (
+                    <>
+                      <label className="library-search">
+                        <Search size={16} aria-hidden="true" />
+                        <input
+                          placeholder="搜索文集"
+                          value={search}
+                          onChange={(event) => setSearch(event.target.value)}
+                          aria-label="搜索文集"
+                        />
+                        {search && (
+                          <button aria-label="清空搜索" onClick={() => setSearch('')}>
+                            <X size={14} />
+                          </button>
+                        )}
+                      </label>
+                      <button
+                        className="layout-toggle"
+                        role="switch"
+                        aria-label="列表视图"
+                        aria-checked={layout === 'list'}
+                        title={layout === 'grid' ? '切换为列表视图' : '切换为封面视图'}
+                        onClick={() =>
+                          setLayout((current) => (current === 'grid' ? 'list' : 'grid'))
+                        }
+                      >
+                        <span className="layout-toggle-thumb" aria-hidden="true" />
+                        <Grid2X2 size={15} aria-hidden="true" />
+                        <List size={16} aria-hidden="true" />
                       </button>
-                    )}
-                  </label>
+                    </>
+                  )}
                   <button
-                    className="layout-toggle"
-                    role="switch"
-                    aria-label="列表视图"
-                    aria-checked={layout === 'list'}
-                    title={layout === 'grid' ? '切换为列表视图' : '切换为封面视图'}
-                    onClick={() => setLayout((current) => (current === 'grid' ? 'list' : 'grid'))}
+                    className={`header-settings${health === 'offline' || health === 'missing' ? ' needs-attention' : ''}`}
+                    aria-label="设置"
+                    title={
+                      health === 'missing'
+                        ? '设置 · 配置 API Key'
+                        : health === 'offline'
+                          ? '设置 · 服务未连接'
+                          : '设置'
+                    }
+                    onClick={() => setSettingsOpen(true)}
                   >
-                    <span className="layout-toggle-thumb" aria-hidden="true" />
-                    <Grid2X2 size={15} aria-hidden="true" />
-                    <List size={16} aria-hidden="true" />
+                    <Settings size={19} strokeWidth={1.6} />
                   </button>
-                </>
-              )}
-              <button
-                className={`header-settings${health === 'offline' || health === 'missing' ? ' needs-attention' : ''}`}
-                aria-label="设置"
-                title={
-                  health === 'missing'
-                    ? '设置 · 配置 API Key'
-                    : health === 'offline'
-                      ? '设置 · 服务未连接'
-                      : '设置'
-                }
-                onClick={() => setSettingsOpen(true)}
-              >
-                <Settings size={19} strokeWidth={1.6} />
-              </button>
-              {view.page === 'library' && (
-                <button className="button primary" onClick={() => navigate({ page: 'studio' })}>
-                  <Plus size={17} />
-                  添加
-                </button>
-              )}
+                  {view.page === 'library' && (
+                    <button className="button primary" onClick={() => navigate({ page: 'studio' })}>
+                      <Plus size={17} />
+                      添加
+                    </button>
+                  )}
+                </div>
+              </header>
             </div>
-          </header>
+          </FixedHeader>
           {view.page === 'studio' ? (
             <Studio
               configured={health === 'ready'}

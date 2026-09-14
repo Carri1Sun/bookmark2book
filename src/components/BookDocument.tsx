@@ -1,6 +1,7 @@
 import { ArrowLeft, ArrowUpRight, Download } from 'lucide-react';
 import type { Book } from '../../shared/types';
 import { collectionArticles, groupArticlesByFolder } from '../lib/collection';
+import { FixedHeader } from './FixedHeader';
 import { NotebookCover } from './NotebookCover';
 
 export function BookDocument({
@@ -26,29 +27,32 @@ export function BookDocument({
     <main
       className={`collection-document palette-${book.palette} ${entering ? 'is-entering' : ''}`}
     >
-      <header className="collection-header">
-        <div className="collection-header-inner">
-          {onBack && (
-            <button className="collection-back" onClick={onBack} aria-label="回到文集">
-              <ArrowLeft size={21} strokeWidth={1.5} />
-            </button>
-          )}
-          <div className="collection-heading">
-            <h1 className="collection-title" tabIndex={-1}>
-              {book.title.replace(/\n/g, '')}
-            </h1>
-            <p className="collection-count">
-              {articles.length} 篇文章 <span>·</span> {book.isDemo ? '内置示例' : '简介由 AI 整理'}
-            </p>
+      <FixedHeader enabled={Boolean(onBack || onExport)}>
+        <header className="collection-header">
+          <div className="collection-header-inner">
+            {onBack && (
+              <button className="collection-back" onClick={onBack} aria-label="回到文集">
+                <ArrowLeft size={21} strokeWidth={1.5} />
+              </button>
+            )}
+            <div className="collection-heading">
+              <h1 className="collection-title" tabIndex={-1}>
+                {book.title.replace(/\n/g, '')}
+              </h1>
+              <p className="collection-count">
+                {articles.length} 篇文章 <span>·</span>{' '}
+                {book.isDemo ? '内置示例' : '简介由 AI 整理'}
+              </p>
+            </div>
+            {onExport && (
+              <button className="collection-export" onClick={onExport} aria-label="导出 HTML">
+                <Download size={16} />
+                <span>导出 HTML</span>
+              </button>
+            )}
           </div>
-          {onExport && (
-            <button className="collection-export" onClick={onExport} aria-label="导出 HTML">
-              <Download size={16} />
-              <span>导出 HTML</span>
-            </button>
-          )}
-        </div>
-      </header>
+        </header>
+      </FixedHeader>
       <div className="collection-content">
         {numbered.map(({ group, start }) => (
           <section className="article-group" key={group.folder || 'articles'}>

@@ -3252,3 +3252,9 @@ a {
     transition: none;
   }
 }
+
+.app-header-shell {
+  background: var(--header-background);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+}
