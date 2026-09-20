@@ -157,3 +157,9 @@
     display: none;
   }
 }
+
+.book-badge-pending {
+  color: var(--review-ink);
+  background: var(--review-background);
+  border-color: var(--review-border);
+}

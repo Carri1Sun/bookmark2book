@@ -81,6 +81,12 @@ export interface Book {
   model?: string;
   pinned?: boolean;
   featured?: boolean;
+  editorial?: {
+    status: 'pending' | 'approved';
+    reason: string;
+    introduction: string;
+    submittedAt: string;
+  };
 }
 export type JobStatus =
   | 'extracting'

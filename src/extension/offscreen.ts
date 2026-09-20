@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { generateEditorialIntroduction } from '../../shared/editorial-introduction';
 import type { ModelSettings } from '../../shared/settings';
 import { collectionStore } from './database';
 import { extractBrowserSource } from './extract';
@@ -17,6 +18,14 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
     const input = z
       .object({ id: z.string().min(1).max(100), value: z.unknown().optional() })
       .parse(message.input);
+    if (message.method === 'books.introduction') {
+      const book = (await collectionStore.books()).find((book) => book.id === input.id);
+      if (!book) throw new Error('未找到这本文集。');
+      return generateEditorialIntroduction(
+        book,
+        await sendExtensionMessage<ModelSettings>('background', 'runner.settings'),
+      );
+    }
     if (message.method === 'jobs.get') return jobs.get(input.id);
     if (message.method === 'jobs.write') return jobs.write(input.id, input.value);
     if (message.method === 'jobs.cancel') return jobs.cancel(input.id);

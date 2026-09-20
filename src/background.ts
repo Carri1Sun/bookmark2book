@@ -61,6 +61,7 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
         await collectionStore.removeBook(id);
         return { ok: true };
       }
+      case 'books.introduction':
       case 'jobs.create':
       case 'jobs.get':
       case 'jobs.write':

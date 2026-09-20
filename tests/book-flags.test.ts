@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { bookFlagsSchema } from '../shared/book-flags';
+import { applyBookFlags, bookFlagsSchema } from '../shared/book-flags';
 import { compareBooks } from '../shared/book-order';
 import { createCollectionStore } from '../src/extension/database';
 import { initStore, saveRecord, updateBookFlags, readRecords } from '../server/store';
@@ -63,45 +63,75 @@ test('flags reject unrelated edits and pin sorting preserves newest-first order 
   );
 });
 
-test('extension flags survive reopening, merge concurrent updates, and preserve collection content', async () => {
+const submission = {
+  editorial: { action: 'submit', reason: '值得分享', introduction: '文集介绍' },
+} as const;
+
+async function checkEditorialLifecycle(
+  update: (flags: import('../shared/book-flags').BookFlags) => Promise<Book>,
+  read: () => Promise<Book>,
+) {
+  await assert.rejects(update({ editorial: { action: 'approve' } }), /没有待审核/);
+  await Promise.all([update({ pinned: true }), update(submission)]);
+  const pending = await read();
+  assert.equal(pending.pinned, true);
+  assert.equal(pending.featured, false);
+  assert.equal(pending.editorial?.status, 'pending');
+  assert.equal(pending.editorial?.reason, '值得分享');
+  assert.equal(pending.editorial?.introduction, '文集介绍');
+  assert(Number.isFinite(Date.parse(pending.editorial!.submittedAt)));
+  assert.deepEqual(pending.sources, book.sources);
+  await assert.rejects(update(submission), /正在审核/);
+  const approved = await update({ editorial: { action: 'approve' } });
+  assert.equal(approved.featured, true);
+  assert.equal(approved.editorial?.status, 'approved');
+  assert.equal(approved.editorial?.introduction, '文集介绍');
+  await update({ editorial: { action: 'cancel' }, pinned: false });
+  assert.deepEqual(await read(), { ...book, pinned: false, featured: false });
+  await update({ editorial: { action: 'submit', reason: '', introduction: '' } });
+  await update({ editorial: { action: 'cancel' } });
+  await assert.rejects(update({ editorial: { action: 'approve' } }), /没有待审核/);
+  assert.deepEqual(await read(), { ...book, pinned: false, featured: false });
+}
+
+test('editorial actions reject direct feature edits and preserve legacy featured books', () => {
+  for (const input of [
+    { featured: true },
+    { editorial: { action: 'submit' } },
+    { editorial: { action: 'submit', reason: 'a'.repeat(2001), introduction: '' } },
+    { editorial: { action: 'submit', reason: '', introduction: 'a'.repeat(1001) } },
+    { editorial: { action: 'approve', status: 'approved' } },
+  ])
+    assert.equal(bookFlagsSchema.safeParse(input).success, false);
+  const legacy = { ...book, featured: true };
+  assert.equal(applyBookFlags(legacy, { pinned: true }).featured, true);
+  assert.equal(applyBookFlags(legacy, { editorial: { action: 'cancel' } }).featured, false);
+});
+
+test('extension persists editorial lifecycle across reopening and merges concurrent pin updates', async () => {
   const name = `flags-${crypto.randomUUID()}`;
   const store = createCollectionStore(name);
   await store.saveCollection(job, book);
-  await Promise.all([
-    store.updateBookFlags(book.id, { pinned: true }),
-    store.updateBookFlags(book.id, { featured: true }),
-  ]);
   const reopened = createCollectionStore(name);
-  assert.deepEqual((await reopened.books())[0], { ...book, pinned: true, featured: true });
-  await reopened.updateBookFlags(book.id, { pinned: false });
-  assert.deepEqual((await store.books())[0], { ...book, pinned: false, featured: true });
-  await assert.rejects(store.updateBookFlags('missing', { featured: true }), /未找到/);
-  assert.equal((await store.books()).length, 1);
+  await checkEditorialLifecycle(
+    (flags) => store.updateBookFlags(book.id, flags),
+    async () => (await reopened.books())[0]!,
+  );
+  await assert.rejects(store.updateBookFlags('missing', submission), /未找到/);
   assert.deepEqual((await store.jobs())[0], job);
 });
 
-test('file storage merges concurrent flags, persists cancellation, and rejects invalid edits', async () => {
+test('file storage persists editorial lifecycle and rejects unrelated edits', async () => {
   const previous = config.dataDir;
   const temporary = await fs.mkdtemp(path.join(os.tmpdir(), 'bookmark-flags-test-'));
   config.dataDir = temporary;
   try {
     await initStore();
     await saveRecord('books', book);
-    await Promise.all([
-      updateBookFlags(book.id, { pinned: true }),
-      updateBookFlags(book.id, { featured: true }),
-    ]);
-    assert.deepEqual((await readRecords<Book>('books'))[0], {
-      ...book,
-      pinned: true,
-      featured: true,
-    });
-    await updateBookFlags(book.id, { featured: false, pinned: false });
-    assert.deepEqual((await readRecords<Book>('books'))[0], {
-      ...book,
-      pinned: false,
-      featured: false,
-    });
+    await checkEditorialLifecycle(
+      (flags) => updateBookFlags(book.id, flags),
+      async () => (await readRecords<Book>('books'))[0]!,
+    );
     await assert.rejects(updateBookFlags('../invalid', { pinned: true }));
     await assert.rejects(updateBookFlags(book.id, { pinned: true, title: 'bad' } as never));
   } finally {

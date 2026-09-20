@@ -30,6 +30,13 @@ export const api = {
     extensionContext
       ? sendExtensionMessage<Book>('background', 'books.flags', { id, flags })
       : request<Book>(`/books/${id}/flags`, { method: 'POST', body: JSON.stringify(flags) }),
+  generateIntroduction: (id: string) =>
+    extensionContext
+      ? sendExtensionMessage<{ introduction: string }>('background', 'books.introduction', { id })
+      : request<{ introduction: string }>(`/books/${id}/introduction`, {
+          method: 'POST',
+          body: '{}',
+        }),
   settings: () =>
     extensionContext
       ? sendExtensionMessage<SettingsStatus>('background', 'settings.get')

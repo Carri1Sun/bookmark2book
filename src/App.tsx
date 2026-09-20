@@ -24,6 +24,7 @@ import {
   type OpeningState,
 } from './components/CollectionOpening';
 import { collectionArticles } from './lib/collection';
+import { EditorialApplication } from './components/EditorialApplication';
 import { Studio } from './components/Studio';
 import { downloadBook } from './lib/export';
 import './styles/cover.css';
@@ -31,20 +32,21 @@ const SettingsDialog = lazy(() =>
   import('./components/SettingsDialog').then((module) => ({ default: module.SettingsDialog })),
 );
 
-type View = { page: 'library' | 'studio' | 'reader'; bookId?: string };
+type View = { page: 'library' | 'studio' | 'reader' | 'editorial'; bookId?: string };
 function currentView(): View {
   const params = new URLSearchParams(location.search);
+  if (params.get('apply')) return { page: 'editorial', bookId: params.get('apply')! };
   return params.get('book')
     ? { page: 'reader', bookId: params.get('book')! }
     : params.get('view') === 'studio'
       ? { page: 'studio' }
       : { page: 'library' };
 }
-function Brand({ onClick }: { onClick: () => void }) {
+function Brand({ onClick, label = 'Tabbit 文集' }: { onClick: () => void; label?: string }) {
   return (
-    <button className="brand" onClick={onClick} aria-label="Tabbit 文集，回到文集首页">
+    <button className="brand" onClick={onClick} aria-label={`${label}，回到文集首页`}>
       <img className="brand-logo" src="./app-logo.png" alt="" width={32} height={32} />
-      <span className="brand-name">Tabbit 文集</span>
+      <span className="brand-name">{label}</span>
       <span className="brand-beta">Beta</span>
     </button>
   );
@@ -104,6 +106,7 @@ export default function App() {
     url.search = '';
     url.hash = '';
     if (next.page === 'studio') url.searchParams.set('view', 'studio');
+    if (next.page === 'editorial' && next.bookId) url.searchParams.set('apply', next.bookId);
     if (next.page === 'reader' && next.bookId) url.searchParams.set('book', next.bookId);
     history.pushState({}, '', url);
     setView(next);
@@ -136,9 +139,9 @@ export default function App() {
           ? flags.pinned
             ? '已置顶文集。'
             : '已取消置顶。'
-          : flags.featured
-            ? '已设为精选。'
-            : '已取消精选。',
+          : flags.editorial?.action === 'approve'
+            ? '审核已通过，已设为编辑精选。'
+            : '已取消编辑精选。',
       );
     } catch (error) {
       notice((error as Error).message || '保存失败，请重试。');
@@ -169,7 +172,16 @@ export default function App() {
           <FixedHeader>
             <div className="app-header-shell">
               <header className="app-header page-width">
-                <Brand onClick={() => navigate({ page: 'library' })} />
+                <Brand
+                  label={
+                    view.page === 'editorial'
+                      ? '申请编辑精选'
+                      : view.page === 'studio'
+                        ? '创建文集'
+                        : 'Tabbit 文集'
+                  }
+                  onClick={() => navigate({ page: 'library' })}
+                />
                 <div className="header-actions" role="group" aria-label="文集操作">
                   {view.page === 'library' && (
                     <>
@@ -239,7 +251,23 @@ export default function App() {
                 notice('文集已添加到首页。');
               }}
             />
-          ) : view.page === 'reader' ? (
+          ) : view.page === 'editorial' && book ? (
+            <EditorialApplication
+              key={book.id}
+              book={book}
+              onBack={() => navigate({ page: 'library' })}
+              onSubmit={async (reason, introduction) => {
+                const updated = await api.updateBookFlags(book.id, {
+                  editorial: { action: 'submit', reason, introduction },
+                });
+                setBooks((previous) =>
+                  previous.map((item) => (item.id === updated.id ? updated : item)),
+                );
+                navigate({ page: 'library' });
+                notice('申请已提交，精选审核中。');
+              }}
+            />
+          ) : view.page === 'reader' || view.page === 'editorial' ? (
             <div className="missing-book page-width">
               {loading ? (
                 <>
@@ -299,6 +327,7 @@ export default function App() {
                             onOpenChange={(open) => setOpenMenu(open ? item.id : null)}
                             onUpdate={(flags) => updateFlags(item, flags)}
                             onExport={() => exportCurrent(item)}
+                            onApply={() => navigate({ page: 'editorial', bookId: item.id })}
                           />
                         </div>
                         <p className="book-meta">{collectionArticles(item).length} 篇文章</p>

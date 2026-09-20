@@ -1,5 +1,5 @@
 import type { Book, Job } from '../../shared/types';
-import { bookFlagsSchema, type BookFlags } from '../../shared/book-flags';
+import { applyBookFlags, bookFlagsSchema, type BookFlags } from '../../shared/book-flags';
 import { compareBooks } from '../../shared/book-order';
 
 export interface CollectionStore {
@@ -56,19 +56,23 @@ export function createCollectionStore(name = 'bookmark-press'): CollectionStore 
         const store = tx.objectStore('books');
         const request = store.get(id);
         let updated: Book;
-        let missing = false;
+        let failure = '浏览器存储失败，请重试。';
         request.onsuccess = () => {
           if (!request.result) {
-            missing = true;
+            failure = '未找到这本文集。';
             tx.abort();
             return;
           }
-          updated = { ...request.result, ...flags };
-          store.put(updated);
+          try {
+            updated = applyBookFlags(request.result as Book, flags);
+            store.put(updated);
+          } catch (error) {
+            failure = (error as Error).message;
+            tx.abort();
+          }
         };
         tx.oncomplete = () => resolve(updated);
-        tx.onabort = tx.onerror = () =>
-          reject(new Error(missing ? '未找到这本文集。' : '浏览器存储失败，请重试。'));
+        tx.onabort = tx.onerror = () => reject(new Error(failure));
       });
     },
     saveJob: (job) =>

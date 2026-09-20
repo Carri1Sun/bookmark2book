@@ -1,6 +1,6 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Check, Download, Ellipsis, Pin, Star } from 'lucide-react';
+import { Check, Download, Ellipsis, Pin, Star, Clock3 } from 'lucide-react';
 import type { Book } from '../../shared/types';
 import type { BookFlags } from '../../shared/book-flags';
 
@@ -8,7 +8,7 @@ import type { BookFlags } from '../../shared/book-flags';
 const featuredSparkleBeats = [[0, 3], [1, 4, 5], [2], [0, 2, 4], [1, 5]] as const;
 
 export function BookBadges({ book }: { book: Book }) {
-  if (!book.pinned && !book.featured) return null;
+  if (!book.pinned && !book.featured && book.editorial?.status !== 'pending') return null;
   return (
     <span className="book-badges">
       {book.pinned && (
@@ -17,7 +17,20 @@ export function BookBadges({ book }: { book: Book }) {
           置顶
         </span>
       )}
-      {book.featured && <FeaturedBadge />}
+      {book.featured ? (
+        <FeaturedBadge />
+      ) : book.editorial?.status === 'pending' ? (
+        <PendingBadge />
+      ) : null}
+    </span>
+  );
+}
+
+export function PendingBadge() {
+  return (
+    <span className="book-badge book-badge-pending">
+      <Clock3 size={12} aria-hidden="true" />
+      精选审核中
     </span>
   );
 }
@@ -55,12 +68,14 @@ export function BookActions({
   onOpenChange,
   onUpdate,
   onExport,
+  onApply,
 }: {
   book: Book;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onUpdate: (flags: BookFlags) => Promise<void>;
   onExport: () => Promise<void>;
+  onApply: () => void;
 }) {
   const id = useId();
   const trigger = useRef<HTMLButtonElement>(null);
@@ -180,14 +195,32 @@ export function BookActions({
               {book.pinned && <Check size={14} className="menu-check" aria-hidden="true" />}
             </button>
             <button
-              role="menuitemcheckbox"
-              aria-checked={Boolean(book.featured)}
-              onClick={() => void run(() => onUpdate({ featured: !book.featured }))}
+              role="menuitem"
+              onClick={() => {
+                if (book.featured || book.editorial?.status === 'pending') {
+                  void run(() => onUpdate({ editorial: { action: 'cancel' } }));
+                } else {
+                  close();
+                  onApply();
+                }
+              }}
             >
               <Star size={16} aria-hidden="true" />
-              <span>{book.featured ? '取消精选' : '设为精选'}</span>
-              {book.featured && <Check size={14} className="menu-check" aria-hidden="true" />}
+              <span>
+                {book.featured || book.editorial?.status === 'pending'
+                  ? '取消编辑精选'
+                  : '申请编辑精选'}
+              </span>
             </button>
+            {book.editorial?.status === 'pending' && (
+              <button
+                role="menuitem"
+                onClick={() => void run(() => onUpdate({ editorial: { action: 'approve' } }))}
+              >
+                <Check size={16} aria-hidden="true" />
+                <span>[debug] 通过审核</span>
+              </button>
+            )}
             <div className="book-menu-divider" role="separator" />
             <button role="menuitem" onClick={() => void run(onExport)}>
               <Download size={16} aria-hidden="true" />

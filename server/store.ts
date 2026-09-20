@@ -3,7 +3,7 @@ import path from 'node:path';
 import { config } from './config';
 import type { Book, Job } from '../shared/types';
 import { z } from 'zod';
-import { bookFlagsSchema, type BookFlags } from '../shared/book-flags';
+import { applyBookFlags, bookFlagsSchema, type BookFlags } from '../shared/book-flags';
 
 const flagUpdates = new Map<string, Promise<Book>>();
 export async function updateBookFlags(id: string, input: BookFlags): Promise<Book> {
@@ -15,7 +15,7 @@ export async function updateBookFlags(id: string, input: BookFlags): Promise<Boo
     .then(async () => {
       const filename = path.join(config.dataDir, 'books', `${id}.json`);
       const book = JSON.parse(await fs.readFile(filename, 'utf8')) as Book;
-      const updated = { ...book, ...flags };
+      const updated = applyBookFlags(book, flags);
       await saveRecord('books', updated);
       return updated;
     });

@@ -46,7 +46,7 @@ export async function testModelConnection(settings: ModelSettings): Promise<{ ok
     throw new Error('API 的可用模型列表中没有这个模型，请检查模型名称。');
   return { ok: true };
 }
-export function createModelClient(settings: ModelSettings) {
+export function createModelClient(settings: ModelSettings, systemPrompt = system) {
   return async function askModel<T>(
     prompt: string,
     schema: z.ZodType<T>,
@@ -67,7 +67,7 @@ export function createModelClient(settings: ModelSettings) {
             : {}),
           response_format: { type: 'json_object' },
           messages: [
-            { role: 'system', content: system },
+            { role: 'system', content: systemPrompt },
             { role: 'user', content: prompt + retryHint },
           ],
         }),

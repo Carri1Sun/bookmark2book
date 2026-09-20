@@ -1,4 +1,6 @@
 import express from 'express';
+import { z } from 'zod';
+import { generateEditorialIntroduction } from '../shared/editorial-introduction';
 import path from 'node:path';
 import { config, rootDir } from './config';
 import { initStore, readRecords, removeBook, updateBookFlags } from './store';
@@ -82,6 +84,15 @@ app.get('/api/books', async (_req, res) =>
 );
 app.post('/api/books/:id/flags', async (req, res) => {
   res.json(await updateBookFlags(req.params.id, req.body));
+});
+app.post('/api/books/:id/introduction', async (req, res) => {
+  const id = z.string().uuid().parse(req.params.id);
+  const book = (await readRecords<Book>('books')).find((book) => book.id === id);
+  if (!book) {
+    res.status(404).json({ error: '未找到这本文集。' });
+    return;
+  }
+  res.json(await generateEditorialIntroduction(book, await readSettings()));
 });
 app.delete('/api/books/:id', async (req, res) => {
   await removeBook(req.params.id);

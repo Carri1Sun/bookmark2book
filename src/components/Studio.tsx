@@ -28,6 +28,7 @@ import {
 } from '../lib/bookmarks';
 import { fileToCoverDataUrl } from '../lib/image';
 import { BookCover, palettes } from './BookCover';
+import './Studio.css';
 
 type SourceMode = 'browser' | 'links';
 const workingStatuses = ['extracting', 'analyzing', 'outlining', 'writing'];
@@ -384,11 +385,8 @@ export function Studio({
         ? 3
         : 1;
   return (
-    <div className="studio page-width">
+    <div className="studio studio-compact page-width">
       <div className="studio-heading">
-        <button className="text-button" onClick={onClose}>
-          <ArrowLeft size={16} /> 回到文集
-        </button>
         <div className="studio-steps">
           {['选择收藏', '确认文章', '保存文集'].map((label, i) => (
             <div key={label} className={step >= i + 1 ? 'active' : ''}>
@@ -640,33 +638,39 @@ export function Studio({
               </label>
             </aside>
           </div>
-          {error && (
-            <div className="error-message" role="alert">
-              {error}
-            </div>
-          )}
           <div className="studio-bottom">
-            <p>
-              {picked.length > 500
-                ? '第一版每本最多 500 篇，请缩小选择范围。'
-                : picked.length
-                  ? ''
-                  : '请至少勾选一个文件夹。'}
-            </p>
-            <button
-              className="button primary"
-              disabled={!picked.length || picked.length > 500 || busy}
-              onClick={() => void start()}
-            >
-              {busy ? <LoaderCircle className="spin" size={16} /> : <Sparkles size={16} />} 生成介绍{' '}
-              <ArrowRight size={17} />
-            </button>
+            <div className="studio-feedback" aria-live="polite">
+              {error && (
+                <p className="error-message" role="alert">
+                  {error}
+                </p>
+              )}
+              <p>
+                {picked.length > 500
+                  ? '第一版每本最多 500 篇，请缩小选择范围。'
+                  : picked.length
+                    ? ''
+                    : '请至少勾选一个文件夹。'}
+              </p>
+            </div>
+            <div className="studio-footer-actions">
+              <button className="button secondary" disabled={busy} onClick={onClose}>
+                取消创建
+              </button>
+              <button
+                className="button primary"
+                disabled={!picked.length || picked.length > 500 || busy}
+                onClick={() => void start()}
+              >
+                {busy ? <LoaderCircle className="spin" size={16} /> : <Sparkles size={16} />}{' '}
+                生成介绍 <ArrowRight size={17} />
+              </button>
+            </div>
           </div>
         </>
       ) : job.status === 'outline_ready' && outline ? (
         <>
           <div className="studio-intro">
-            <h1>确认文章</h1>
             <p>确认文集名称、文章顺序和介绍后保存。</p>
           </div>
           <div className="outline-grid">
@@ -778,28 +782,32 @@ export function Studio({
               </div>
             </aside>
           </div>
-          {error && (
-            <div className="error-message" role="alert">
-              {error}
-            </div>
-          )}
           <div className="studio-bottom">
-            <button className="text-button" onClick={() => void cancel()}>
-              取消草稿
-            </button>
-            <button
-              className="button primary"
-              disabled={
-                busy ||
-                !outline.title.trim() ||
-                !articles.length ||
-                articles.some((article) => !article.title.trim() || !article.summary.trim())
-              }
-              onClick={() => void write()}
-            >
-              {busy ? <LoaderCircle size={16} className="spin" /> : <BookOpen size={16} />}
-              保存文集 <ArrowRight size={17} />
-            </button>
+            <div className="studio-feedback" aria-live="polite">
+              {error && (
+                <p className="error-message" role="alert">
+                  {error}
+                </p>
+              )}
+            </div>
+            <div className="studio-footer-actions">
+              <button className="button secondary" disabled={busy} onClick={() => void cancel()}>
+                取消草稿
+              </button>
+              <button
+                className="button primary"
+                disabled={
+                  busy ||
+                  !outline.title.trim() ||
+                  !articles.length ||
+                  articles.some((article) => !article.title.trim() || !article.summary.trim())
+                }
+                onClick={() => void write()}
+              >
+                {busy ? <LoaderCircle size={16} className="spin" /> : <BookOpen size={16} />}
+                保存文集 <ArrowRight size={17} />
+              </button>
+            </div>
           </div>
         </>
       ) : ['failed', 'cancelled'].includes(job.status) ? (
