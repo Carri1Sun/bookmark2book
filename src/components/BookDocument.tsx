@@ -1,6 +1,7 @@
 import { ArrowLeft, ArrowUpRight, Download } from 'lucide-react';
 import type { Book } from '../../shared/types';
 import { collectionArticles, groupArticlesByFolder } from '../lib/collection';
+import { FeaturedBadge } from './BookActions';
 import { FixedHeader } from './FixedHeader';
 import { NotebookCover } from './NotebookCover';
 
@@ -39,6 +40,7 @@ export function BookDocument({
               <h1 className="collection-title" tabIndex={-1}>
                 {book.title.replace(/\n/g, '')}
               </h1>
+              {book.featured && <FeaturedBadge />}
               <p className="collection-count">{articles.length} 篇文章</p>
             </div>
             {onExport && (

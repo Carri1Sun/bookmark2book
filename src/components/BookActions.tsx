@@ -17,30 +17,34 @@ export function BookBadges({ book }: { book: Book }) {
           置顶
         </span>
       )}
-      {book.featured && (
-        <span className="book-badge book-badge-featured">
-          <span className="featured-content">
-            <Star size={12} aria-hidden="true" />
-            <span>精选</span>
-            <span className="featured-shine" aria-hidden="true">
-              <Star size={12} />
-              <span>精选</span>
-            </span>
-          </span>
-          <span className="featured-sparkles" aria-hidden="true">
-            {featuredSparkleBeats.map((positions, beat) => (
-              <span className="featured-sparkle-beat" key={beat}>
-                {positions.map((position) => (
-                  <span
-                    className={`featured-sparkle featured-sparkle-position-${position}`}
-                    key={position}
-                  />
-                ))}
-              </span>
+      {book.featured && <FeaturedBadge />}
+    </span>
+  );
+}
+
+export function FeaturedBadge() {
+  return (
+    <span className="book-badge book-badge-featured">
+      <span className="featured-content">
+        <Star size={12} aria-hidden="true" />
+        <span>精选</span>
+        <span className="featured-shine" aria-hidden="true">
+          <Star size={12} />
+          <span>精选</span>
+        </span>
+      </span>
+      <span className="featured-sparkles" aria-hidden="true">
+        {featuredSparkleBeats.map((positions, beat) => (
+          <span className="featured-sparkle-beat" key={beat}>
+            {positions.map((position) => (
+              <span
+                className={`featured-sparkle featured-sparkle-position-${position}`}
+                key={position}
+              />
             ))}
           </span>
-        </span>
-      )}
+        ))}
+      </span>
     </span>
   );
 }

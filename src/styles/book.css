@@ -70,6 +70,10 @@ a {
   gap: 4px 18px;
   min-width: 0;
 }
+.collection-heading > .book-badge {
+  align-self: center;
+  flex-shrink: 0;
+}
 .collection-heading .collection-title {
   max-width: 100%;
   flex: 0 1 auto;

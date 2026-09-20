@@ -1,0 +1,159 @@
+.book-badges {
+  display: inline-flex;
+  gap: 5px;
+  margin-right: 8px;
+  vertical-align: 2px;
+}
+.book-badge {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 6px;
+  border: 1px solid;
+  border-radius: 6px;
+  font: 500 11px/20px var(--sans);
+  white-space: nowrap;
+  overflow: hidden;
+  isolation: isolate;
+}
+.book-badge-pin {
+  color: var(--pin-ink);
+  background: var(--pin-background);
+  border-color: var(--pin-border);
+}
+.book-badge-featured {
+  color: var(--featured-ink);
+  background: var(--featured-background);
+  border-color: var(--featured-border);
+}
+.book-badge svg,
+.book-title-button .book-badge svg {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+  color: currentColor;
+  opacity: 1;
+  transform: none;
+}
+/* One mask sweeps across the complete icon + label, keeping the shine continuous. */
+.featured-content,
+.featured-shine {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.featured-content {
+  position: relative;
+}
+.featured-content svg,
+.book-title-button .featured-content svg {
+  fill: currentColor;
+  fill-opacity: 0.2;
+}
+.featured-shine {
+  position: absolute;
+  inset: 0;
+  color: var(--featured-shine);
+  pointer-events: none;
+  mask-image: var(--featured-shine-mask);
+  mask-size: 250% 100%;
+  mask-repeat: no-repeat;
+  animation: featured-shine 3s linear infinite;
+}
+.featured-shine svg,
+.book-title-button .featured-shine svg {
+  fill-opacity: 1;
+}
+/* Small four-point stars scale, rotate and fade like Sparkles Text. */
+.book-badge-featured {
+  overflow: visible;
+}
+.featured-sparkles {
+  position: absolute;
+  inset: -3px;
+  pointer-events: none;
+}
+.featured-sparkle-beat {
+  position: absolute;
+  inset: 0;
+  --sparkle-delay: 0s;
+}
+.featured-sparkle-beat:nth-child(2) {
+  --sparkle-delay: 1s;
+}
+.featured-sparkle-beat:nth-child(3) {
+  --sparkle-delay: 2s;
+}
+.featured-sparkle-beat:nth-child(4) {
+  --sparkle-delay: 3s;
+}
+.featured-sparkle-beat:nth-child(5) {
+  --sparkle-delay: 4s;
+}
+.featured-sparkle {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  background: var(--featured-sparkle-soft);
+  clip-path: polygon(50% 0%, 64% 36%, 100% 50%, 64% 64%, 50% 100%, 36% 64%, 0% 50%, 36% 36%);
+  opacity: 0;
+  /* Each beat flashes for 0.9s, leaving 0.1s before the next group. */
+  animation: featured-sparkle 5s ease-in-out var(--sparkle-delay) infinite;
+}
+.featured-sparkle-position-0 {
+  left: 7px;
+  top: 0;
+}
+.featured-sparkle-position-1 {
+  left: 51%;
+  top: -1px;
+}
+.featured-sparkle-position-2 {
+  right: 0;
+  top: 7px;
+}
+.featured-sparkle-position-3 {
+  right: 7px;
+  bottom: 0;
+}
+.featured-sparkle-position-4 {
+  left: 36%;
+  bottom: -1px;
+}
+.featured-sparkle-position-5 {
+  left: 0;
+  top: 13px;
+}
+/* Sweep in 1s, then rest until the next 3s cycle. */
+@keyframes featured-shine {
+  0% {
+    mask-position: 150% 0;
+  }
+  33.333333%,
+  100% {
+    mask-position: -50% 0;
+  }
+}
+@keyframes featured-sparkle {
+  0% {
+    opacity: 0;
+    transform: scale(0) rotate(0deg);
+  }
+  8% {
+    opacity: 1;
+    transform: scale(1) rotate(90deg);
+  }
+  18%,
+  100% {
+    opacity: 0;
+    transform: scale(0) rotate(180deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .featured-shine,
+  .featured-sparkles {
+    display: none;
+  }
+}

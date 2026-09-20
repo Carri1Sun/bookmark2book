@@ -4,6 +4,7 @@ import App from './App';
 import './styles/fonts.css';
 import './styles/theme.css';
 import './styles/app.css';
+import './styles/badges.css';
 import './styles/book.css';
 
 document
