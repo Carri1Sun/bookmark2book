@@ -1,5 +1,6 @@
 import type { ArticleEdit, Book, Bookmark, Job, Outline, Palette } from '../../shared/types';
 import type { SettingsInput, SettingsStatus } from '../../shared/settings';
+import type { BookFlags } from '../../shared/book-flags';
 import { extensionContext, sendExtensionMessage } from '../extension/protocol';
 export async function request<T>(path: string, options?: RequestInit): Promise<T> {
   let response: Response;
@@ -25,6 +26,10 @@ export const api = {
     extensionContext
       ? sendExtensionMessage<Book[]>('background', 'books.list')
       : request<Book[]>('/books'),
+  updateBookFlags: (id: string, flags: BookFlags) =>
+    extensionContext
+      ? sendExtensionMessage<Book>('background', 'books.flags', { id, flags })
+      : request<Book>(`/books/${id}/flags`, { method: 'POST', body: JSON.stringify(flags) }),
   settings: () =>
     extensionContext
       ? sendExtensionMessage<SettingsStatus>('background', 'settings.get')

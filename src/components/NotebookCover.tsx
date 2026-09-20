@@ -9,7 +9,7 @@ export function NotebookCover({
 }) {
   const length = title.replace(/\s/g, '').length;
   return (
-    <div className={`notebook-cover notebook-tone-${index % 4}`}>
+    <div className={`notebook-cover notebook-tone-${index % 5}`}>
       <div className="notebook-sheet" aria-hidden="true" />
       <div className="notebook-front">
         <span className="notebook-binding" aria-hidden="true" />

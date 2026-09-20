@@ -78,8 +78,9 @@ export interface Book {
   chapters: Chapter[];
   sources: Source[];
   readingMinutes: number;
-  isDemo?: boolean;
   model?: string;
+  pinned?: boolean;
+  featured?: boolean;
 }
 export type JobStatus =
   | 'extracting'

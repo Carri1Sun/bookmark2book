@@ -7,7 +7,7 @@ import { createCollectionStore } from '../src/extension/database';
 import { createExtensionJobs } from '../src/extension/jobs';
 import { extractBrowserSource } from '../src/extension/extract';
 import { flattenBookmarks } from '../src/lib/bookmarks';
-import { sampleNodes } from '../src/lib/demo';
+import { smokeBookmarks } from './smoke-bookmarks';
 
 assert(config.key, 'A configured API key is required for this opt-in live smoke test.');
 const dom = new JSDOM('');
@@ -21,7 +21,7 @@ const engine = createExtensionJobs({
 });
 try {
   const created = await engine.create({
-    bookmarks: flattenBookmarks(sampleNodes),
+    bookmarks: flattenBookmarks(smokeBookmarks),
     palette: 'forest',
     direction: '',
     collectionTitle: 'Agent 文章选集',

@@ -1,7 +1,4 @@
 .book-object {
-  --cover-bg: #235347;
-  --cover-ink: #efe8d5;
-  --cover-accent: #c8d4a0;
   position: relative;
   width: 260px;
   aspect-ratio: 0.708;
@@ -22,11 +19,11 @@
   border-radius: 1px 6px 6px 1px;
   padding: 24px 22px 20px 27px;
   box-shadow:
-    inset 1px 0 2px #ffffff24,
-    inset 5px 0 7px #00000016,
-    inset 8px 0 1px #ffffff13,
-    1px 1px 1px #0000001a,
-    10px 18px 22px -9px #27282045;
+    inset 1px 0 2px color-mix(in srgb, var(--highlight) 14.12%, transparent),
+    inset 5px 0 7px color-mix(in srgb, var(--shadow) 8.63%, transparent),
+    inset 8px 0 1px color-mix(in srgb, var(--highlight) 7.45%, transparent),
+    1px 1px 1px color-mix(in srgb, var(--shadow) 10.2%, transparent),
+    10px 18px 22px -9px color-mix(in srgb, var(--shadow) 27.06%, transparent);
   overflow: hidden;
 }
 .book-front:before {
@@ -45,8 +42,8 @@
   top: 0;
   bottom: 0;
   width: 1px;
-  background: #0000001b;
-  box-shadow: 1px 0 1px #ffffff18;
+  background: color-mix(in srgb, var(--shadow) 10.59%, transparent);
+  box-shadow: 1px 0 1px color-mix(in srgb, var(--highlight) 9.41%, transparent);
 }
 .book-pages {
   position: absolute;
@@ -55,9 +52,15 @@
   width: 12px;
   height: calc(100% - 5px);
   transform: skewY(-20deg);
-  background: repeating-linear-gradient(90deg, #e8e3d6 0px, #e8e3d6 1px, #c4beb0 1px, #f8f4e7 2px);
+  background: repeating-linear-gradient(
+    90deg,
+    var(--page-edge) 0px,
+    var(--page-edge) 1px,
+    var(--page-groove) 1px,
+    var(--page-light) 2px
+  );
   border-radius: 0 6px 6px 0;
-  box-shadow: 2px 1px 2px #00000015;
+  box-shadow: 2px 1px 2px color-mix(in srgb, var(--shadow) 8.24%, transparent);
   z-index: -1;
 }
 .cover-heading {
@@ -123,12 +126,12 @@
   inset: 0;
   background: linear-gradient(
     to bottom,
-    rgba(20, 26, 20, 0.05) 0%,
-    rgba(20, 26, 20, 0.12) 45%,
-    rgba(20, 26, 20, 0.68) 100%
+    color-mix(in srgb, var(--scrim) 5%, transparent) 0%,
+    color-mix(in srgb, var(--scrim) 12%, transparent) 45%,
+    color-mix(in srgb, var(--scrim) 68%, transparent) 100%
   );
 }
 .cover-photo ~ .cover-heading h3 {
-  color: #fdfaf0;
-  text-shadow: 0 1px 8px rgba(20, 26, 20, 0.45);
+  color: var(--on-accent);
+  text-shadow: 0 1px 8px color-mix(in srgb, var(--scrim) 45%, transparent);
 }

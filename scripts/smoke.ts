@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
-import { sampleNodes } from '../src/lib/demo';
+import { smokeBookmarks } from './smoke-bookmarks';
 import { flattenBookmarks } from '../src/lib/bookmarks';
 import { type Book, type Job, validateReferences } from '../shared/types';
 const base = 'http://127.0.0.1:8787/api';
@@ -18,7 +18,7 @@ const health = await request<{ configured: boolean; model: string }>('/health');
 assert.equal(health.configured, true);
 console.log(`Live provider: ${health.model}`);
 let job = await request<Job>('/jobs', {
-  bookmarks: flattenBookmarks(sampleNodes),
+  bookmarks: flattenBookmarks(smokeBookmarks),
   palette: 'ink',
   direction:
     '围绕这三篇文章的原文，以产品设计与工程实践的共同视角，解释 Agent 如何从计划、执行到评估形成完整的工作闭环。面向已经了解基本概念的实践者。每篇文章写一段 100–160 字的介绍，文集名称简洁，保留事实边界。',

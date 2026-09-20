@@ -1,4 +1,6 @@
 import type { Book, Job } from '../../shared/types';
+import { bookFlagsSchema, type BookFlags } from '../../shared/book-flags';
+import { compareBooks } from '../../shared/book-order';
 
 export interface CollectionStore {
   jobs(): Promise<Job[]>;
@@ -6,6 +8,7 @@ export interface CollectionStore {
   saveJob(job: Job): Promise<void>;
   saveCollection(job: Job, book: Book): Promise<void>;
   removeBook(id: string): Promise<void>;
+  updateBookFlags(id: string, flags: BookFlags): Promise<Book>;
 }
 
 export function createCollectionStore(name = 'bookmark-press'): CollectionStore {
@@ -44,8 +47,30 @@ export function createCollectionStore(name = 'bookmark-press'): CollectionStore 
   }
   return {
     jobs: () => records<Job>('jobs'),
-    books: async () =>
-      (await records<Book>('books')).sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+    books: async () => (await records<Book>('books')).sort(compareBooks),
+    updateBookFlags: async (id, input) => {
+      const flags = bookFlagsSchema.parse(input);
+      const db = await database();
+      return new Promise<Book>((resolve, reject) => {
+        const tx = db.transaction('books', 'readwrite');
+        const store = tx.objectStore('books');
+        const request = store.get(id);
+        let updated: Book;
+        let missing = false;
+        request.onsuccess = () => {
+          if (!request.result) {
+            missing = true;
+            tx.abort();
+            return;
+          }
+          updated = { ...request.result, ...flags };
+          store.put(updated);
+        };
+        tx.oncomplete = () => resolve(updated);
+        tx.onabort = tx.onerror = () =>
+          reject(new Error(missing ? '未找到这本文集。' : '浏览器存储失败，请重试。'));
+      });
+    },
     saveJob: (job) =>
       mutate(['jobs'], (tx) => {
         tx.objectStore('jobs').put(job);

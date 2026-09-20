@@ -1,0 +1,122 @@
+/* Single source of truth for workspace, covers, opening animation and HTML export.
+ * Brand: orange-red. Reading palette: five quiet, warm paper tones.
+ * Legacy cover IDs remain stable so existing collections need no data migration.
+ */
+:root {
+  --accent: #f9651b;
+  --accent-hover: #e6530d;
+  --accent-strong: #b84108;
+  --accent-soft: #fff0e6;
+  --on-accent: #ffffff;
+  --paper: #fcfaf7;
+  --surface: #ffffff;
+  --surface-muted: #f5f1ec;
+  --ink: #302b28;
+  --muted: #80766f;
+  --line: #e7dfd7;
+  --header-background: color-mix(in srgb, var(--paper) 92%, transparent);
+  --focus-ring: color-mix(in srgb, var(--accent) 19%, transparent);
+  --selection: #ffdcc7;
+  --selection-ink: #7d2c06;
+  --warning: #945b3b;
+  --warning-soft: #f2e7da;
+  --warning-line: #dfc5b3;
+  --status-indicator: #b88357;
+  --disabled: #b0ac9c;
+  --pin-ink: #bb433d;
+  --pin-background: #fff0ed;
+  --pin-border: #ecc0b9;
+  --featured-ink: #8d661d;
+  --featured-background: #fbf1d9;
+  --featured-border: #e6cc91;
+  --featured-shine: #fff4c9;
+  --featured-sparkle-soft: #e3bc62;
+  --featured-shine-mask: linear-gradient(
+    110deg,
+    transparent 35%,
+    var(--highlight) 50%,
+    transparent 65%
+  );
+  --shadow: #382214;
+  --scrim: #30251e;
+  --highlight: #ffffff;
+  --page-base: #f9f6ee;
+  --page-edge: #e8e3d6;
+  --page-groove: #c4beb0;
+  --page-light: #faf8ef;
+  --page-shade: #f6f3e8;
+  --cover-inner: #eeeade;
+
+  /* Main collection covers: orange, clay, oat and warm charcoal. */
+  --cover-forest-bg: var(--accent);
+  --cover-forest-ink: var(--on-accent);
+  --cover-forest-accent: #ffdbc5;
+  --cover-vermilion-bg: #bd7862;
+  --cover-vermilion-ink: #fff8f2;
+  --cover-vermilion-accent: #edc7ad;
+  --cover-sand-bg: #e7decb;
+  --cover-sand-ink: #62513f;
+  --cover-sand-accent: #b38e68;
+  --cover-ink-bg: #514944;
+  --cover-ink-ink: #f4eae1;
+  --cover-ink-accent: #c2a58f;
+
+  /* Article 1 · 杏桃: peach paper / burnt-orange ink / clay spine. */
+  --article-peach-paper: #efd7c7;
+  --article-peach-ink: #79452f;
+  --article-peach-spine: #c59b80;
+  /* Article 2 · 陶粉 */
+  --article-clay-paper: #e7c9bf;
+  --article-clay-ink: #754b40;
+  --article-clay-spine: #ba9182;
+  /* Article 3 · 燕麦 */
+  --article-oat-paper: #e7decb;
+  --article-oat-ink: #62513f;
+  --article-oat-spine: #b5a282;
+  /* Article 4 · 玫瑰灰 */
+  --article-rose-paper: #e3d0cc;
+  --article-rose-ink: #6b4e49;
+  --article-rose-spine: #b49a94;
+  /* Article 5 · 暖岩灰 */
+  --article-stone-paper: #dcd4cc;
+  --article-stone-ink: #5c5048;
+  --article-stone-spine: #a99b8e;
+}
+
+/* These defaults also cover skeletons and the very first animation frame. */
+.book-object {
+  --cover-bg: var(--cover-forest-bg);
+  --cover-ink: var(--cover-forest-ink);
+  --cover-accent: var(--cover-forest-accent);
+}
+.notebook-cover,
+.notebook-tone-0 {
+  --notebook-paper: var(--article-peach-paper);
+  --notebook-ink: var(--article-peach-ink);
+  --notebook-spine: var(--article-peach-spine);
+}
+.notebook-tone-1 {
+  --notebook-paper: var(--article-clay-paper);
+  --notebook-ink: var(--article-clay-ink);
+  --notebook-spine: var(--article-clay-spine);
+}
+.notebook-tone-2 {
+  --notebook-paper: var(--article-oat-paper);
+  --notebook-ink: var(--article-oat-ink);
+  --notebook-spine: var(--article-oat-spine);
+}
+.notebook-tone-3 {
+  --notebook-paper: var(--article-rose-paper);
+  --notebook-ink: var(--article-rose-ink);
+  --notebook-spine: var(--article-rose-spine);
+}
+.notebook-tone-4 {
+  --notebook-paper: var(--article-stone-paper);
+  --notebook-ink: var(--article-stone-ink);
+  --notebook-spine: var(--article-stone-spine);
+}
+@media print {
+  :root {
+    --paper: var(--surface);
+  }
+}

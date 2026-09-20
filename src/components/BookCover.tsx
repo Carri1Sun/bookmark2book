@@ -5,10 +5,30 @@ export const palettes: Record<
   Palette,
   { name: string; background: string; ink: string; accent: string }
 > = {
-  forest: { name: '深绿', background: '#235347', ink: '#efe8d5', accent: '#c8d4a0' },
-  vermilion: { name: '砖红', background: '#c34d35', ink: '#fff0d9', accent: '#efc28c' },
-  sand: { name: '米白', background: '#e5dcc5', ink: '#394439', accent: '#b2593f' },
-  ink: { name: '深灰', background: '#292d30', ink: '#e8e1d0', accent: '#c08f67' },
+  forest: {
+    name: '橙红',
+    background: 'var(--cover-forest-bg)',
+    ink: 'var(--cover-forest-ink)',
+    accent: 'var(--cover-forest-accent)',
+  },
+  vermilion: {
+    name: '陶土',
+    background: 'var(--cover-vermilion-bg)',
+    ink: 'var(--cover-vermilion-ink)',
+    accent: 'var(--cover-vermilion-accent)',
+  },
+  sand: {
+    name: '燕麦',
+    background: 'var(--cover-sand-bg)',
+    ink: 'var(--cover-sand-ink)',
+    accent: 'var(--cover-sand-accent)',
+  },
+  ink: {
+    name: '暖灰',
+    background: 'var(--cover-ink-bg)',
+    ink: 'var(--cover-ink-ink)',
+    accent: 'var(--cover-ink-accent)',
+  },
 };
 export function CoverMotif({ variant = 0 }: { variant?: number }) {
   return (

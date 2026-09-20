@@ -82,24 +82,29 @@ export function CollectionOpening({
           [
             {
               transform: 'rotateY(0deg)',
-              backgroundColor: palettes[opening.book.palette].background,
+              backgroundColor: getComputedStyle(front).backgroundColor,
             },
             { transform: 'rotateY(-18deg)', offset: 0.16 },
-            { transform: 'rotateY(-168deg)', backgroundColor: '#eeeade' },
+            {
+              transform: 'rotateY(-168deg)',
+              backgroundColor: getComputedStyle(element!).getPropertyValue('--cover-inner').trim(),
+            },
           ],
           { delay: 100, duration: 480 },
         ),
-        animate(
-          element!.querySelector<HTMLElement>('.cover-motif')!,
-          [{ opacity: 0.77 }, { opacity: 0 }],
-          { delay: 100, duration: 220 },
-        ),
-        animate(
-          element!.querySelector<HTMLElement>('.cover-heading')!,
-          [{ opacity: 1 }, { opacity: 0 }],
-          { delay: 100, duration: 160 },
-        ),
       ];
+      element!
+        .querySelectorAll<HTMLElement>(
+          '.cover-motif, .cover-photo, .cover-photo-scrim, .cover-heading',
+        )
+        .forEach((layer) => {
+          openingAnimations.push(
+            animate(layer, [{ opacity: getComputedStyle(layer).opacity }, { opacity: 0 }], {
+              delay: 100,
+              duration: layer.matches('.cover-heading') ? 160 : 220,
+            }),
+          );
+        });
       element!.querySelectorAll<HTMLElement>('.opening-leaf').forEach((leaf, index) => {
         openingAnimations.push(
           animate(
@@ -246,6 +251,7 @@ export function CollectionOpening({
         <BookCover
           title={opening.book.title}
           palette={opening.book.palette}
+          image={opening.book.coverImage}
           variant={Object.keys(palettes).indexOf(opening.book.palette)}
         />
       </div>

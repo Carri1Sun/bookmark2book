@@ -26,11 +26,10 @@ import {
   parseLinks,
   readBrowserBookmarks,
 } from '../lib/bookmarks';
-import { sampleNodes } from '../lib/demo';
 import { fileToCoverDataUrl } from '../lib/image';
 import { BookCover, palettes } from './BookCover';
 
-type SourceMode = 'browser' | 'links' | 'sample';
+type SourceMode = 'browser' | 'links';
 const workingStatuses = ['extracting', 'analyzing', 'outlining', 'writing'];
 function CheckBox({
   checked,
@@ -217,7 +216,6 @@ export function Studio({
     setError('');
     setLinks('');
     useNodes([]);
-    if (next === 'sample') useNodes(sampleNodes, true);
     if (next === 'browser') {
       setReadingBookmarks(true);
       try {
@@ -413,7 +411,6 @@ export function Studio({
                   [
                     ['browser', '浏览器书签', BookOpen],
                     ['links', '粘贴链接', Link],
-                    ['sample', '示例素材', Sparkles],
                   ] as const
                 ).map(([value, label, Icon]) => (
                   <button

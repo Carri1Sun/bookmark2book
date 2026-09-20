@@ -4,7 +4,6 @@ import assert from 'node:assert/strict';
 import { JSDOM } from 'jsdom';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { BookDocument } from '../src/components/BookDocument';
-import { demoBooks } from '../src/lib/demo';
 import { groupArticlesByFolder } from '../src/lib/collection';
 import type { Book } from '../shared/types';
 
@@ -29,8 +28,24 @@ test('article folders group under the common root and keep first-seen order', ()
 
 test('collections render one notebook and introduction per source without legacy long-form content', () => {
   const book: Book = {
-    ...demoBooks[0]!,
-    isDemo: false,
+    id: 'render-book',
+    subtitle: '',
+    theme: '',
+    palette: 'forest',
+    createdAt: '2026-09-20T00:00:00Z',
+    readingMinutes: 1,
+    chapters: [
+      {
+        id: 'legacy-chapter',
+        title: 'Legacy chapter',
+        introduction: '',
+        sourceIds: [],
+        sections: [
+          { heading: '', paragraphs: [{ text: 'Obsolete chapter content', sourceIds: [] }] },
+        ],
+        takeaway: '',
+      },
+    ],
     title: '<script>alert("x")</script>',
     description: 'Obsolete collection foreword',
     sources: [

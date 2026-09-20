@@ -1,7 +1,8 @@
 import express from 'express';
 import path from 'node:path';
 import { config, rootDir } from './config';
-import { initStore, readRecords, removeBook } from './store';
+import { initStore, readRecords, removeBook, updateBookFlags } from './store';
+import { compareBooks } from '../shared/book-order';
 import { activeCount, cancelJob, createJob, jobs, publicJob, restoreJobs, writeBook } from './jobs';
 import { createJobSchema, writeJobSchema, type Book } from '../shared/types';
 import { readSettings, saveSettings } from './settings';
@@ -77,10 +78,11 @@ app.get('/api/extension', (_req, res) =>
   res.download(path.join(rootDir, 'dist/bookmark-press-extension.zip'), 'Tabbit-文集.zip'),
 );
 app.get('/api/books', async (_req, res) =>
-  res.json(
-    (await readRecords<Book>('books')).sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
-  ),
+  res.json((await readRecords<Book>('books')).sort(compareBooks)),
 );
+app.post('/api/books/:id/flags', async (req, res) => {
+  res.json(await updateBookFlags(req.params.id, req.body));
+});
 app.delete('/api/books/:id', async (req, res) => {
   await removeBook(req.params.id);
   res.json({ ok: true });

@@ -39,10 +39,7 @@ export function BookDocument({
               <h1 className="collection-title" tabIndex={-1}>
                 {book.title.replace(/\n/g, '')}
               </h1>
-              <p className="collection-count">
-                {articles.length} 篇文章 <span>·</span>{' '}
-                {book.isDemo ? '内置示例' : '简介由 AI 整理'}
-              </p>
+              <p className="collection-count">{articles.length} 篇文章</p>
             </div>
             {onExport && (
               <button className="collection-export" onClick={onExport} aria-label="导出 HTML">

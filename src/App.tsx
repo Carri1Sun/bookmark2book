@@ -1,9 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import {
   BookOpen,
-  Bookmark,
   Check,
-  Download,
   Grid2X2,
   List,
   LoaderCircle,
@@ -14,8 +12,10 @@ import {
 } from 'lucide-react';
 import type { Book } from '../shared/types';
 import { api } from './lib/api';
-import { demoBooks } from './lib/demo';
 import { BookCover } from './components/BookCover';
+import { BookActions, BookBadges } from './components/BookActions';
+import type { BookFlags } from '../shared/book-flags';
+import { compareBooks } from '../shared/book-order';
 import { FixedHeader } from './components/FixedHeader';
 import { BookDocument } from './components/BookDocument';
 import {
@@ -43,10 +43,7 @@ function currentView(): View {
 function Brand({ onClick }: { onClick: () => void }) {
   return (
     <button className="brand" onClick={onClick} aria-label="Tabbit 文集，回到文集首页">
-      <span className="brand-symbol">
-        <Bookmark size={26} strokeWidth={1.4} />
-        <i />
-      </span>
+      <img className="brand-logo" src="./app-logo.png" alt="" width={32} height={32} />
       <span className="brand-name">Tabbit 文集</span>
       <span className="brand-beta">Beta</span>
     </button>
@@ -65,6 +62,7 @@ export default function App() {
   const [toast, setToast] = useState('');
   const [error, setError] = useState('');
   const [opening, setOpening] = useState<OpeningState | null>(null);
+  const [openMenu, setOpenMenu] = useState<string | null>(null);
   const finishOpening = useCallback(() => {
     setOpening(null);
     document.querySelector<HTMLElement>('.collection-title')?.focus({ preventScroll: true });
@@ -101,6 +99,7 @@ export default function App() {
     };
   }, []);
   function navigate(next: View) {
+    setOpenMenu(null);
     const url = new URL(location.href);
     url.search = '';
     url.hash = '';
@@ -122,11 +121,29 @@ export default function App() {
     clearTimeout(toastTimer.current);
     toastTimer.current = setTimeout(() => setToast(''), 3500);
   }
-  const allBooks = [...books, ...demoBooks];
-  const book = allBooks.find((item) => item.id === view.bookId);
-  const displayed = allBooks.filter((item) =>
-    `${item.title} ${item.subtitle} ${item.theme}`.toLowerCase().includes(search.toLowerCase()),
-  );
+  const book = books.find((item) => item.id === view.bookId);
+  const displayed = books
+    .filter((item) =>
+      `${item.title} ${item.subtitle} ${item.theme}`.toLowerCase().includes(search.toLowerCase()),
+    )
+    .sort(compareBooks);
+  async function updateFlags(current: Book, flags: BookFlags) {
+    try {
+      const updated = await api.updateBookFlags(current.id, flags);
+      setBooks((previous) => previous.map((item) => (item.id === updated.id ? updated : item)));
+      notice(
+        flags.pinned !== undefined
+          ? flags.pinned
+            ? '已置顶文集。'
+            : '已取消置顶。'
+          : flags.featured
+            ? '已设为精选。'
+            : '已取消精选。',
+      );
+    } catch (error) {
+      notice((error as Error).message || '保存失败，请重试。');
+    }
+  }
   async function exportCurrent(current: Book) {
     try {
       await downloadBook(current);
@@ -271,20 +288,20 @@ export default function App() {
                             className="book-title-button"
                             onClick={(event) => openCollection(item, event.currentTarget)}
                           >
-                            <h2>{item.title.replace(/\n/g, '')}</h2>
+                            <h2>
+                              <BookBadges book={item} />
+                              {item.title.replace(/\n/g, '')}
+                            </h2>
                           </button>
-                          <button
-                            className="icon-button book-download"
-                            aria-label={`导出 ${item.title}`}
-                            onClick={() => exportCurrent(item)}
-                            title="导出 HTML"
-                          >
-                            <Download size={17} />
-                          </button>
+                          <BookActions
+                            book={item}
+                            open={openMenu === item.id}
+                            onOpenChange={(open) => setOpenMenu(open ? item.id : null)}
+                            onUpdate={(flags) => updateFlags(item, flags)}
+                            onExport={() => exportCurrent(item)}
+                          />
                         </div>
-                        <p className="book-meta">
-                          {collectionArticles(item).length} 篇文章{item.isDemo ? ' · 示例' : ''}
-                        </p>
+                        <p className="book-meta">{collectionArticles(item).length} 篇文章</p>
                       </div>
                     </article>
                   ))}

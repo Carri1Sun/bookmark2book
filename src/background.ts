@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { bookFlagsSchema } from '../shared/book-flags';
 import { testModelConnection } from '../shared/model';
 import { resolveSettings, settingsInputSchema, settingsStatus } from '../shared/settings';
 import { collectionStore } from './extension/database';
@@ -49,6 +50,12 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
         return readExtensionSettings();
       case 'books.list':
         return collectionStore.books();
+      case 'books.flags': {
+        const { id, flags } = z
+          .object({ id: z.string().uuid(), flags: bookFlagsSchema })
+          .parse(message.input);
+        return collectionStore.updateBookFlags(id, flags);
+      }
       case 'books.remove': {
         const { id } = z.object({ id: z.string().uuid() }).parse(message.input);
         await collectionStore.removeBook(id);

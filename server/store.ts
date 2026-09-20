@@ -2,6 +2,30 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { config } from './config';
 import type { Book, Job } from '../shared/types';
+import { z } from 'zod';
+import { bookFlagsSchema, type BookFlags } from '../shared/book-flags';
+
+const flagUpdates = new Map<string, Promise<Book>>();
+export async function updateBookFlags(id: string, input: BookFlags): Promise<Book> {
+  z.string().uuid().parse(id);
+  const flags = bookFlagsSchema.parse(input);
+  // Serialize partial updates so simultaneous pin/feature requests retain both fields.
+  const update = (flagUpdates.get(id) || Promise.resolve())
+    .catch(() => {})
+    .then(async () => {
+      const filename = path.join(config.dataDir, 'books', `${id}.json`);
+      const book = JSON.parse(await fs.readFile(filename, 'utf8')) as Book;
+      const updated = { ...book, ...flags };
+      await saveRecord('books', updated);
+      return updated;
+    });
+  flagUpdates.set(id, update);
+  try {
+    return await update;
+  } finally {
+    if (flagUpdates.get(id) === update) flagUpdates.delete(id);
+  }
+}
 
 export async function initStore() {
   await Promise.all(
