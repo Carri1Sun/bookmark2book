@@ -170,9 +170,6 @@ export function FeaturedBadge({
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-controls={open ? id : undefined}
-        onPointerEnter={(event) => {
-          if (event.pointerType !== 'touch') show();
-        }}
         onClick={() => {
           if (!open) {
             show(true);
