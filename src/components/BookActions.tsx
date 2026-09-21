@@ -16,17 +16,14 @@ export function BookBadges({
   if (!book.pinned && !book.featured && book.editorial?.status !== 'pending') return null;
   return (
     <span className="book-badges">
+      {book.featured && <FeaturedBadge tier={book.featuredMedal} onEquip={onEquip} />}
       {book.pinned && (
         <span className="book-badge book-badge-pin">
           <Pin size={12} aria-hidden="true" />
           置顶
         </span>
       )}
-      {book.featured ? (
-        <FeaturedBadge tier={book.featuredMedal} onEquip={onEquip} />
-      ) : book.editorial?.status === 'pending' ? (
-        <PendingBadge />
-      ) : null}
+      {!book.featured && book.editorial?.status === 'pending' && <PendingBadge />}
     </span>
   );
 }
