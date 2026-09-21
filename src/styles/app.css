@@ -2451,7 +2451,7 @@ a {
   padding: 0;
   min-width: 0;
 }
-.book-title-button h2 {
+.book-card-heading {
   margin: 0;
   font: 500 21px/1.65 var(--sans);
 }
@@ -2835,7 +2835,7 @@ a {
   .book-display .cover-motif {
     max-height: none;
   }
-  .book-title-button h2 {
+  .book-card-heading {
     font-size: 20px;
   }
   .book-card-info .book-meta {
@@ -3009,7 +3009,7 @@ a {
   .book-card-info {
     padding-top: 10px;
   }
-  .book-title-button h2 {
+  .book-card-heading {
     font-size: 23px;
   }
   .book-card-info .book-meta {
@@ -3329,7 +3329,7 @@ a {
   }
 }
 
-.book-title-button h2 {
+.book-card-heading {
   overflow-wrap: anywhere;
 }
 .book-more[aria-expanded='true'] {
@@ -3374,4 +3374,17 @@ a {
   height: 1px;
   margin: 5px 6px;
   background: var(--line);
+}
+
+.book-card-heading {
+  flex: 1;
+  min-width: 0;
+}
+.book-card-heading .book-title-button {
+  width: auto;
+  max-width: 100%;
+  display: inline;
+  font: inherit;
+  color: inherit;
+  text-align: left;
 }

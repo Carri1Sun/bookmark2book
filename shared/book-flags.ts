@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import type { Book } from './types';
+import { medalTiers } from './featured-medals';
 
 export const editorialActionSchema = z.discriminatedUnion('action', [
   z
@@ -15,16 +16,26 @@ export const editorialActionSchema = z.discriminatedUnion('action', [
 export const bookFlagsSchema = z
   .object({
     pinned: z.boolean().optional(),
+    featuredMedal: z.enum(medalTiers).optional(),
     editorial: editorialActionSchema.optional(),
   })
   .strict()
-  .refine((value) => value.pinned !== undefined || value.editorial !== undefined);
+  .refine(
+    (value) =>
+      value.pinned !== undefined ||
+      value.editorial !== undefined ||
+      value.featuredMedal !== undefined,
+  );
 export type BookFlags = z.infer<typeof bookFlagsSchema>;
 
 export function applyBookFlags(book: Book, input: BookFlags): Book {
   const flags = bookFlagsSchema.parse(input);
   const updated = { ...book };
   if (flags.pinned !== undefined) updated.pinned = flags.pinned;
+  if (flags.featuredMedal !== undefined) {
+    if (!book.featured || flags.editorial) throw new Error('当前文集无法佩戴精选勋章。');
+    updated.featuredMedal = flags.featuredMedal;
+  }
   const action = flags.editorial;
   if (!action) return updated;
   if (action.action === 'submit') {
@@ -44,6 +55,7 @@ export function applyBookFlags(book: Book, input: BookFlags): Book {
   } else {
     updated.featured = false;
     delete updated.editorial;
+    delete updated.featuredMedal;
   }
   return updated;
 }

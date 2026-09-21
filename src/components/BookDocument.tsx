@@ -1,7 +1,9 @@
 import { ArrowLeft, ArrowUpRight, Download } from 'lucide-react';
 import type { Book } from '../../shared/types';
 import { collectionArticles, groupArticlesByFolder } from '../lib/collection';
-import { FeaturedBadge, PendingBadge } from './BookActions';
+import { PendingBadge } from './BookActions';
+import { FeaturedBadge } from './FeaturedBadge';
+import type { MedalTier } from '../../shared/featured-medals';
 import { FixedHeader } from './FixedHeader';
 import { NotebookCover } from './NotebookCover';
 
@@ -10,11 +12,13 @@ export function BookDocument({
   entering = false,
   onBack,
   onExport,
+  onEquip,
 }: {
   book: Book;
   entering?: boolean;
   onBack?: () => void;
   onExport?: () => void;
+  onEquip?: (tier: MedalTier) => Promise<void>;
 }) {
   const articles = collectionArticles(book);
   const groups = groupArticlesByFolder(articles);
@@ -41,7 +45,7 @@ export function BookDocument({
                 {book.title.replace(/\n/g, '')}
               </h1>
               {book.featured ? (
-                <FeaturedBadge />
+                <FeaturedBadge tier={book.featuredMedal} onEquip={onEquip} />
               ) : book.editorial?.status === 'pending' ? (
                 <PendingBadge />
               ) : null}

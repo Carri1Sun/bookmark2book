@@ -3,11 +3,16 @@ import { createPortal } from 'react-dom';
 import { Check, Download, Ellipsis, Pin, Star, Clock3 } from 'lucide-react';
 import type { Book } from '../../shared/types';
 import type { BookFlags } from '../../shared/book-flags';
+import type { MedalTier } from '../../shared/featured-medals';
+import { FeaturedBadge } from './FeaturedBadge';
 
-// Five fixed beats use six positions without a clockwise/chasing pattern.
-const featuredSparkleBeats = [[0, 3], [1, 4, 5], [2], [0, 2, 4], [1, 5]] as const;
-
-export function BookBadges({ book }: { book: Book }) {
+export function BookBadges({
+  book,
+  onEquip,
+}: {
+  book: Book;
+  onEquip?: (tier: MedalTier) => Promise<void>;
+}) {
   if (!book.pinned && !book.featured && book.editorial?.status !== 'pending') return null;
   return (
     <span className="book-badges">
@@ -18,7 +23,7 @@ export function BookBadges({ book }: { book: Book }) {
         </span>
       )}
       {book.featured ? (
-        <FeaturedBadge />
+        <FeaturedBadge tier={book.featuredMedal} onEquip={onEquip} />
       ) : book.editorial?.status === 'pending' ? (
         <PendingBadge />
       ) : null}
@@ -31,33 +36,6 @@ export function PendingBadge() {
     <span className="book-badge book-badge-pending">
       <Clock3 size={12} aria-hidden="true" />
       精选审核中
-    </span>
-  );
-}
-
-export function FeaturedBadge() {
-  return (
-    <span className="book-badge book-badge-featured">
-      <span className="featured-content">
-        <Star size={12} aria-hidden="true" />
-        <span>精选</span>
-        <span className="featured-shine" aria-hidden="true">
-          <Star size={12} />
-          <span>精选</span>
-        </span>
-      </span>
-      <span className="featured-sparkles" aria-hidden="true">
-        {featuredSparkleBeats.map((positions, beat) => (
-          <span className="featured-sparkle-beat" key={beat}>
-            {positions.map((position) => (
-              <span
-                className={`featured-sparkle featured-sparkle-position-${position}`}
-                key={position}
-              />
-            ))}
-          </span>
-        ))}
-      </span>
     </span>
   );
 }

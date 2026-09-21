@@ -34,6 +34,25 @@
   --featured-border: #e6cc91;
   --featured-shine: #fff4c9;
   --featured-sparkle-soft: #e3bc62;
+  --medal-halo: #efbd59;
+  --medal-aurora-ink: #fff0bc;
+  --medal-aurora-start: #5e3d24;
+  --medal-aurora-mid: #88602f;
+  --medal-aurora-end: #654827;
+  --medal-jewel-ink: #ffe59b;
+  --medal-jewel-border: #bd85db;
+  --medal-jewel-glint: #fff8dc;
+  --medal-jewel-rim: #f9d5ff;
+  --medal-amethyst-base: #6517a5;
+  --medal-amethyst-light: #982bdd;
+  --medal-amethyst-deep: #491085;
+  --medal-amethyst-glow: #ac58e5;
+  --medal-crimson-base: #7212a2;
+  --medal-crimson-red: #c21b62;
+  --medal-crimson-violet: #6016b6;
+  --medal-crimson-deep: #431278;
+  --medal-crimson-glow: #d74f9c;
+  --medal-selected: #fcf6e8;
   --featured-shine-mask: linear-gradient(
     110deg,
     transparent 35%,

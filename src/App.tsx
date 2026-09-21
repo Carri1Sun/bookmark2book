@@ -14,6 +14,7 @@ import type { Book } from '../shared/types';
 import { api } from './lib/api';
 import { BookCover } from './components/BookCover';
 import { BookActions, BookBadges } from './components/BookActions';
+import type { MedalTier } from '../shared/featured-medals';
 import type { BookFlags } from '../shared/book-flags';
 import { compareBooks } from '../shared/book-order';
 import { FixedHeader } from './components/FixedHeader';
@@ -147,6 +148,10 @@ export default function App() {
       notice((error as Error).message || '保存失败，请重试。');
     }
   }
+  async function equipMedal(current: Book, tier: MedalTier) {
+    const updated = await api.updateBookFlags(current.id, { featuredMedal: tier });
+    setBooks((previous) => previous.map((item) => (item.id === updated.id ? updated : item)));
+  }
   async function exportCurrent(current: Book) {
     try {
       await downloadBook(current);
@@ -164,6 +169,7 @@ export default function App() {
             entering={Boolean(opening)}
             onBack={() => navigate({ page: 'library' })}
             onExport={() => exportCurrent(book)}
+            onEquip={(tier) => equipMedal(book, tier)}
           />
           {opening && <CollectionOpening opening={opening} onFinish={finishOpening} />}
         </>
@@ -312,15 +318,15 @@ export default function App() {
                       </button>
                       <div className="book-card-info">
                         <div className="book-card-title-row">
-                          <button
-                            className="book-title-button"
-                            onClick={(event) => openCollection(item, event.currentTarget)}
-                          >
-                            <h2>
-                              <BookBadges book={item} />
+                          <h2 className="book-card-heading">
+                            <BookBadges book={item} onEquip={(tier) => equipMedal(item, tier)} />
+                            <button
+                              className="book-title-button"
+                              onClick={(event) => openCollection(item, event.currentTarget)}
+                            >
                               {item.title.replace(/\n/g, '')}
-                            </h2>
-                          </button>
+                            </button>
+                          </h2>
                           <BookActions
                             book={item}
                             open={openMenu === item.id}

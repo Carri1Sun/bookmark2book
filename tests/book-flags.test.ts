@@ -5,6 +5,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { applyBookFlags, bookFlagsSchema } from '../shared/book-flags';
+import { featuredMedals } from '../shared/featured-medals';
 import { compareBooks } from '../shared/book-order';
 import { createCollectionStore } from '../src/extension/database';
 import { initStore, saveRecord, updateBookFlags, readRecords } from '../server/store';
@@ -71,6 +72,7 @@ async function checkEditorialLifecycle(
   update: (flags: import('../shared/book-flags').BookFlags) => Promise<Book>,
   read: () => Promise<Book>,
 ) {
+  await assert.rejects(update({ featuredMedal: 'aurora' }), /无法佩戴/);
   await assert.rejects(update({ editorial: { action: 'approve' } }), /没有待审核/);
   await Promise.all([update({ pinned: true }), update(submission)]);
   const pending = await read();
@@ -86,6 +88,14 @@ async function checkEditorialLifecycle(
   assert.equal(approved.featured, true);
   assert.equal(approved.editorial?.status, 'approved');
   assert.equal(approved.editorial?.introduction, '文集介绍');
+  for (const medal of featuredMedals) {
+    await update({ featuredMedal: medal.id });
+    assert.equal((await read()).featuredMedal, medal.id);
+  }
+  await Promise.all([update({ pinned: false }), update({ featuredMedal: 'sparkles' })]);
+  assert.equal((await read()).featuredMedal, 'sparkles');
+  assert.equal((await read()).pinned, false);
+  assert.deepEqual((await read()).sources, book.sources);
   await update({ editorial: { action: 'cancel' }, pinned: false });
   assert.deepEqual(await read(), { ...book, pinned: false, featured: false });
   await update({ editorial: { action: 'submit', reason: '', introduction: '' } });
@@ -97,6 +107,9 @@ async function checkEditorialLifecycle(
 test('editorial actions reject direct feature edits and preserve legacy featured books', () => {
   for (const input of [
     { featured: true },
+    { featuredMedal: 'invalid' },
+    { featuredMedal: 'orbit' },
+    { featuredMedal: 'corona' },
     { editorial: { action: 'submit' } },
     { editorial: { action: 'submit', reason: 'a'.repeat(2001), introduction: '' } },
     { editorial: { action: 'submit', reason: '', introduction: 'a'.repeat(1001) } },

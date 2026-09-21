@@ -81,6 +81,7 @@ export interface Book {
   model?: string;
   pinned?: boolean;
   featured?: boolean;
+  featuredMedal?: import('./featured-medals').MedalTier;
   editorial?: {
     status: 'pending' | 'approved';
     reason: string;
