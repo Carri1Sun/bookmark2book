@@ -1,3 +1,6 @@
+import { AppError, defaultLocale, errorResponse, type Locale } from '../../shared/i18n';
+import { readPageMetadata } from '../../shared/page-metadata';
+import { readImageCandidates } from '../../shared/page-images';
 import { Readability } from '@mozilla/readability';
 import type { Bookmark, Source } from '../../shared/types';
 import { safeHttpUrl } from '../lib/bookmarks';
@@ -6,10 +9,11 @@ const MAX_BYTES = 2500000;
 export async function extractBrowserSource(
   bookmark: Bookmark,
   signal: AbortSignal,
+  locale: Locale = defaultLocale,
 ): Promise<Source> {
   try {
     const url = safeHttpUrl(bookmark.url);
-    if (!url) throw new Error('网页地址不可读取。');
+    if (!url) throw new AppError('error.pageUrl');
     const response = await fetch(url, {
       credentials: 'omit',
       referrerPolicy: 'no-referrer',
@@ -23,10 +27,10 @@ export async function extractBrowserSource(
       )
     ) {
       await response.body?.cancel();
-      throw new Error('网页无法读取，可能需要登录或不是文章网页。');
+      throw new AppError('error.pageContent');
     }
     const reader = response.body?.getReader();
-    if (!reader) throw new Error('网页没有返回正文。');
+    if (!reader) throw new AppError('error.pageBody');
     const decoder = new TextDecoder();
     let bytes = 0,
       html = '';
@@ -35,7 +39,7 @@ export async function extractBrowserSource(
         const chunk = await reader.read();
         if (chunk.done) break;
         bytes += chunk.value.byteLength;
-        if (bytes > MAX_BYTES) throw new Error('网页过大，未读取正文。');
+        if (bytes > MAX_BYTES) throw new AppError('error.pageSize');
         html += decoder.decode(chunk.value, { stream: true });
       }
       html += decoder.decode();
@@ -43,30 +47,32 @@ export async function extractBrowserSource(
       await reader.cancel().catch(() => {});
     }
     const doc = new DOMParser().parseFromString(html, 'text/html');
+    const imageCandidates = readImageCandidates(doc, response.url || url);
     doc
       .querySelectorAll(
         'script,style,noscript,iframe,form,link,img,video,audio,source,object,embed',
       )
       .forEach((el) => el.remove());
-    const description =
-      doc
-        .querySelector('meta[name="description"],meta[property="og:description"]')
-        ?.getAttribute('content') || '';
+    const pageMetadata = readPageMetadata(doc);
     const article = new Readability(doc).parse();
     const content = article?.textContent?.replace(/\s+/g, ' ').trim() || '';
     return {
       ...bookmark,
+      pageMetadata,
+      imageCandidates,
       status: content.length < 200 ? 'metadata' : content.length > 14000 ? 'excerpt' : 'full',
-      content: content.length < 200 ? description.slice(0, 1200) : content.slice(0, 14000),
+      content: content.length < 200 ? pageMetadata.description : content.slice(0, 14000),
       wordCount: content.length,
     };
   } catch (error) {
     signal.throwIfAborted();
-    const message = error instanceof Error ? error.message : '';
     return {
       ...bookmark,
       status: 'unavailable',
-      error: /^网页/.test(message) ? message : '网页未能读取，将仅依据书签标题生成介绍。',
+      ...errorResponse(
+        error instanceof AppError ? error : new AppError('error.pageUnavailable'),
+        locale,
+      ),
     };
   }
 }

@@ -1,3 +1,4 @@
+import { AppError } from './i18n';
 import { z } from 'zod';
 
 export const defaultSettings = {
@@ -25,7 +26,7 @@ export const settingsInputSchema = z.object({
       return (
         url.protocol === 'https:' && !url.username && !url.password && !url.search && !url.hash
       );
-    }, 'API 地址必须是无用户名、密码或查询参数的 HTTPS 地址。'),
+    }, 'error.httpsEndpoint'),
   model: z.string().trim().min(1).max(200),
   apiKey: z.string().trim().max(1000).optional(),
   clearKey: z.boolean().optional(),
@@ -40,7 +41,7 @@ export function resolveSettings(input: SettingsInput, previous: ModelSettings): 
     previous.apiKey &&
     new URL(baseUrl).origin !== new URL(previous.baseUrl).origin
   ) {
-    throw new Error('更换 API 服务地址时，请重新填写该服务的 API Key。');
+    throw new AppError('error.keyOrigin');
   }
   return {
     baseUrl,

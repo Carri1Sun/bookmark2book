@@ -1,5 +1,5 @@
 {
-  "name": "bookmark-press",
+  "name": "tabbit-collections",
   "private": true,
   "version": "0.1.0",
   "type": "module",
@@ -23,8 +23,10 @@
     "ipaddr.js": "^2.2.0",
     "jsdom": "^26.1.0",
     "lucide-react": "^0.468.0",
+    "playwright": "^1.63.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
+    "sharp": "^0.35.4",
     "undici": "^7.16.0",
     "zod": "^4.1.12"
   },

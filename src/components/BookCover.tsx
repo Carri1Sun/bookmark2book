@@ -1,30 +1,31 @@
+import type { MessageKey } from '../../shared/i18n';
 import type { CSSProperties } from 'react';
 import type { Palette } from '../../shared/types';
 
 export const palettes: Record<
   Palette,
-  { name: string; background: string; ink: string; accent: string }
+  { name: MessageKey; background: string; ink: string; accent: string }
 > = {
   forest: {
-    name: '橙红',
+    name: 'palette.forest',
     background: 'var(--cover-forest-bg)',
     ink: 'var(--cover-forest-ink)',
     accent: 'var(--cover-forest-accent)',
   },
   vermilion: {
-    name: '陶土',
+    name: 'palette.vermilion',
     background: 'var(--cover-vermilion-bg)',
     ink: 'var(--cover-vermilion-ink)',
     accent: 'var(--cover-vermilion-accent)',
   },
   sand: {
-    name: '燕麦',
+    name: 'palette.sand',
     background: 'var(--cover-sand-bg)',
     ink: 'var(--cover-sand-ink)',
     accent: 'var(--cover-sand-accent)',
   },
   ink: {
-    name: '暖灰',
+    name: 'palette.ink',
     background: 'var(--cover-ink-bg)',
     ink: 'var(--cover-ink-ink)',
     accent: 'var(--cover-ink-accent)',

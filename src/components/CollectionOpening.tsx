@@ -136,7 +136,7 @@ export function CollectionOpening({
         if (!card) return;
         const preview = thumbnail.querySelector<HTMLElement>('.notebook-cover')!;
         const previewBounds = preview.getBoundingClientRect();
-        const cover = card.querySelector<HTMLElement>('.notebook-cover')!;
+        const cover = card.querySelector<HTMLElement>('.page-cover')!;
         const cardBounds = card.getBoundingClientRect();
         const coverBounds = cover.getBoundingClientRect();
         const thumbnailScale = previewBounds.width / coverBounds.width;
@@ -170,10 +170,14 @@ export function CollectionOpening({
             duration: 110,
             easing: 'linear',
           }),
-          animate(cover.querySelector<HTMLElement>('h2')!, [{ opacity: 0 }, { opacity: 1 }], {
-            delay: 90 + index * 30,
-            duration: 240,
-          }),
+          animate(
+            card.querySelector<HTMLElement>('.article-title')!,
+            [{ opacity: 0 }, { opacity: 1 }],
+            {
+              delay: 90 + index * 30,
+              duration: 240,
+            },
+          ),
         );
         card
           .querySelectorAll<HTMLElement>(

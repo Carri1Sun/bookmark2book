@@ -65,7 +65,7 @@ test('flags reject unrelated edits and pin sorting preserves newest-first order 
 });
 
 const submission = {
-  editorial: { action: 'submit', reason: '值得分享', introduction: '文集介绍' },
+  editorial: { action: 'submit', reason: '值得分享', introduction: '合辑介绍' },
 } as const;
 
 async function checkEditorialLifecycle(
@@ -80,14 +80,14 @@ async function checkEditorialLifecycle(
   assert.equal(pending.featured, false);
   assert.equal(pending.editorial?.status, 'pending');
   assert.equal(pending.editorial?.reason, '值得分享');
-  assert.equal(pending.editorial?.introduction, '文集介绍');
+  assert.equal(pending.editorial?.introduction, '合辑介绍');
   assert(Number.isFinite(Date.parse(pending.editorial!.submittedAt)));
   assert.deepEqual(pending.sources, book.sources);
   await assert.rejects(update(submission), /正在审核/);
   const approved = await update({ editorial: { action: 'approve' } });
   assert.equal(approved.featured, true);
   assert.equal(approved.editorial?.status, 'approved');
-  assert.equal(approved.editorial?.introduction, '文集介绍');
+  assert.equal(approved.editorial?.introduction, '合辑介绍');
   for (const medal of featuredMedals) {
     await update({ featuredMedal: medal.id });
     assert.equal((await read()).featuredMedal, medal.id);

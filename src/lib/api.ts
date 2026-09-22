@@ -1,23 +1,46 @@
+import { AppError, isMessage } from '../../shared/i18n';
+import { getUiLocale } from './locale';
 import type { ArticleEdit, Book, Bookmark, Job, Outline, Palette } from '../../shared/types';
 import type { SettingsInput, SettingsStatus } from '../../shared/settings';
 import type { BookFlags } from '../../shared/book-flags';
 import { extensionContext, sendExtensionMessage } from '../extension/protocol';
+import type { ImageAsset, SourceImages } from '../../shared/page-images';
 export async function request<T>(path: string, options?: RequestInit): Promise<T> {
   let response: Response;
   try {
     response = await fetch(`/api${path}`, {
       ...options,
-      headers: { 'Content-Type': 'application/json', ...options?.headers },
+      headers: {
+        'Content-Type': 'application/json',
+        'X-UI-Language': getUiLocale(),
+        ...options?.headers,
+      },
     });
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') throw error;
-    throw new Error('本地服务未连接。请在项目目录运行 pnpm dev，再重试。');
+    throw new AppError('error.localService');
   }
-  const body = await response.json();
-  if (!response.ok) throw new Error(body.error || '请求失败，请重试。');
+  const body = await response.json().catch(() => {
+    throw new AppError('error.request');
+  });
+  if (!response.ok)
+    throw isMessage(body.errorDetails)
+      ? new AppError(body.errorDetails.key, body.errorDetails.params)
+      : new AppError('error.request');
   return body as T;
 }
 export const api = {
+  sourceImages: (id: string, sourceId: string) =>
+    extensionContext
+      ? sendExtensionMessage<SourceImages>('background', 'books.images', { id, sourceId })
+      : request<SourceImages>(`/books/${id}/sources/${encodeURIComponent(sourceId)}/images`, {
+          method: 'POST',
+          body: '{}',
+        }),
+  imageAsset: (id: string) =>
+    extensionContext
+      ? sendExtensionMessage<ImageAsset | undefined>('background', 'images.get', { id })
+      : request<ImageAsset>(`/images/${id}`),
   health: () =>
     extensionContext
       ? sendExtensionMessage<{ configured: boolean; model: string }>('background', 'health')
@@ -32,10 +55,13 @@ export const api = {
       : request<Book>(`/books/${id}/flags`, { method: 'POST', body: JSON.stringify(flags) }),
   generateIntroduction: (id: string) =>
     extensionContext
-      ? sendExtensionMessage<{ introduction: string }>('background', 'books.introduction', { id })
+      ? sendExtensionMessage<{ introduction: string }>('background', 'books.introduction', {
+          id,
+          locale: getUiLocale(),
+        })
       : request<{ introduction: string }>(`/books/${id}/introduction`, {
           method: 'POST',
-          body: '{}',
+          body: JSON.stringify({ locale: getUiLocale() }),
         }),
   settings: () =>
     extensionContext
@@ -75,10 +101,18 @@ export const api = {
           direction,
           collectionTitle,
           coverImage,
+          locale: getUiLocale(),
         })
       : request<Job>('/jobs', {
           method: 'POST',
-          body: JSON.stringify({ bookmarks, palette, direction, collectionTitle, coverImage }),
+          body: JSON.stringify({
+            bookmarks,
+            palette,
+            direction,
+            collectionTitle,
+            coverImage,
+            locale: getUiLocale(),
+          }),
         }),
   job: async (id: string, signal?: AbortSignal) => {
     signal?.throwIfAborted();

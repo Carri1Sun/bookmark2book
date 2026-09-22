@@ -1,7 +1,8 @@
+import { AppError } from './i18n';
 import { publicSource, type ArticleEdit, type Book, type Outline, type Source } from './types';
 
 export function assembleCollection(
-  metadata: Pick<Book, 'id' | 'createdAt' | 'palette' | 'coverImage' | 'model'>,
+  metadata: Pick<Book, 'id' | 'createdAt' | 'palette' | 'coverImage' | 'model' | 'locale'>,
   outline: Outline,
   sources: Source[],
   articles?: ArticleEdit[],
@@ -19,10 +20,10 @@ export function assembleCollection(
     new Set(edits.map((article) => article.id)).size !== sources.length ||
     edits.some((article) => !known.has(article.id))
   ) {
-    throw new Error('文章列表必须包含全部所选文章，且不能重复。');
+    throw new AppError('error.pageList');
   }
   if (edits.some((article) => !article.title.trim() || !article.summary.trim())) {
-    throw new Error('文章标题和介绍不能为空。');
+    throw new AppError('error.pageEmpty');
   }
   const ordered = edits.map((article) => ({
     ...publicSource(known.get(article.id)!),

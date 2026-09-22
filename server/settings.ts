@@ -1,3 +1,4 @@
+import { AppError } from '../shared/i18n';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { config } from './config';
@@ -10,7 +11,7 @@ export async function readSettings(): Promise<ModelSettings> {
     return resolveSettings(saved, { apiKey: '', baseUrl: config.baseUrl, model: config.model });
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code !== 'ENOENT')
-      throw new Error('API 设置无法读取，请重新保存设置。');
+      throw new AppError('error.settingsRead');
     return { apiKey: config.key, baseUrl: config.baseUrl, model: config.model };
   }
 }

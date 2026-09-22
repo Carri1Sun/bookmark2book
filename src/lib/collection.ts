@@ -1,5 +1,6 @@
 import type { Book, Source } from '../../shared/types';
 import { safeHttpUrl } from './bookmarks';
+import { defaultLocale, translate, type Locale } from '../../shared/i18n';
 
 export interface CollectionArticle {
   id: string;
@@ -8,6 +9,7 @@ export interface CollectionArticle {
   url: string | null;
   status?: Source['status'];
   folder?: string;
+  images?: Source['images'];
 }
 
 export interface ArticleGroup {
@@ -39,13 +41,17 @@ export function groupArticlesByFolder(articles: CollectionArticle[]): ArticleGro
   return groups;
 }
 
-export function collectionArticles(book: Book): CollectionArticle[] {
+export function collectionArticles(
+  book: Book,
+  locale: Locale = defaultLocale,
+): CollectionArticle[] {
   return book.sources.map((source) => ({
     id: source.id,
     title: source.title,
-    introduction: source.summary?.trim() || '暂未生成介绍，可以通过原文链接阅读。',
+    introduction: source.summary?.trim() || translate(locale, 'reader.noIntroduction'),
     url: safeHttpUrl(source.url),
     status: source.status,
     folder: source.folder,
+    images: source.images,
   }));
 }

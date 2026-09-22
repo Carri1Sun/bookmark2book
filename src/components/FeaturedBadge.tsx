@@ -1,3 +1,4 @@
+import { useI18n, useMessageState } from '../lib/i18n';
 import { useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
 import { Star } from 'lucide-react';
@@ -6,6 +7,7 @@ import { featuredMedals, normalizeMedalTier, type MedalTier } from '../../shared
 const sparkleBeats = [[0, 3], [1, 4, 5], [2], [0, 2, 4], [1, 5]] as const;
 
 export function MedalVisual({ tier: savedTier }: { tier?: MedalTier }) {
+  const { t } = useI18n();
   const tier = normalizeMedalTier(savedTier);
   const level = featuredMedals.find((medal) => medal.id === tier)?.level ?? 0;
   return (
@@ -15,11 +17,11 @@ export function MedalVisual({ tier: savedTier }: { tier?: MedalTier }) {
       {level >= 5 && <span className="medal-jewel-fill" aria-hidden="true" />}
       <span className="featured-content">
         <Star size={12} aria-hidden="true" />
-        <span>精选</span>
+        <span>{t('badge.featured')}</span>
         {level >= 1 && (
           <span className="featured-shine" aria-hidden="true">
             <Star size={12} />
-            <span>精选</span>
+            <span>{t('badge.featured')}</span>
           </span>
         )}
       </span>
@@ -48,10 +50,11 @@ export function FeaturedBadge({
   tier?: MedalTier;
   onEquip?: (tier: MedalTier) => Promise<void>;
 }) {
+  const { t } = useI18n();
   const tier = normalizeMedalTier(savedTier);
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useMessageState();
   const [position, setPosition] = useState({
     left: 0,
     top: 0,
@@ -151,7 +154,7 @@ export function FeaturedBadge({
     try {
       await onEquip(next);
     } catch (error) {
-      setError((error as Error).message || '佩戴失败，请重试。');
+      setError(error);
     } finally {
       busy.current = false;
       setSaving(false);
@@ -166,7 +169,7 @@ export function FeaturedBadge({
         className="featured-medal-trigger"
         type="button"
         ref={trigger}
-        aria-label="精选勋章"
+        aria-label={t('badge.medals')}
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-controls={open ? id : undefined}
@@ -205,7 +208,7 @@ export function FeaturedBadge({
               } as CSSProperties
             }
           >
-            <h2 id={`${id}-title`}>已解锁以下勋章</h2>
+            <h2 id={`${id}-title`}>{t('badge.unlocked')}</h2>
             <div
               className="medal-options"
               aria-busy={saving}
@@ -239,10 +242,16 @@ export function FeaturedBadge({
                     <MedalVisual tier={medal.id} />
                   </span>
                   <span className="medal-description">
-                    <strong>{medal.name}</strong>
-                    <small>{medal.requirement}</small>
+                    <strong>{t(medal.name)}</strong>
+                    <small>
+                      {medal.views
+                        ? t('medal.reads', { count: medal.views })
+                        : t('medal.editorial')}
+                    </small>
                   </span>
-                  {tier === medal.id && <span className="medal-equipped">已佩戴</span>}
+                  {tier === medal.id && (
+                    <span className="medal-equipped">{t('badge.equipped')}</span>
+                  )}
                 </button>
               ))}
             </div>

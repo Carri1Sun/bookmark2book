@@ -1,10 +1,12 @@
+import { AppError, errorResponse, translate, defaultLocale, resolveLocale } from '../shared/i18n';
 import { z } from 'zod';
 import { bookFlagsSchema } from '../shared/book-flags';
 import { testModelConnection } from '../shared/model';
 import { resolveSettings, settingsInputSchema, settingsStatus } from '../shared/settings';
 import { collectionStore } from './extension/database';
 import { readExtensionSettings, saveExtensionSettings } from './extension/settings';
-import { messageError, sendExtensionMessage, trustedMessage } from './extension/protocol';
+import { sendExtensionMessage, trustedMessage } from './extension/protocol';
+import { ensureSourceImages } from './extension/page-images';
 
 void chrome.storage.local.setAccessLevel({ accessLevel: 'TRUSTED_CONTEXTS' });
 let creating: Promise<void> | undefined;
@@ -19,7 +21,7 @@ async function ensureRunner() {
       await chrome.offscreen.createDocument({
         url: 'offscreen.html',
         reasons: [chrome.offscreen.Reason.DOM_PARSER],
-        justification: '读取用户选择的文章 HTML，提取正文并完成文集整理。',
+        justification: translate(defaultLocale, 'extension.justification'),
       });
   })();
   try {
@@ -46,10 +48,20 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
         );
       case 'runner.settings':
         if (sender.url !== chrome.runtime.getURL('offscreen.html'))
-          throw new Error('扩展请求不可用。');
+          throw new AppError('error.extensionRequest');
         return readExtensionSettings();
       case 'books.list':
         return collectionStore.books();
+      case 'books.images': {
+        const { id, sourceId } = z
+          .object({ id: z.string().uuid(), sourceId: z.string().max(200) })
+          .parse(message.input);
+        return ensureSourceImages(id, sourceId);
+      }
+      case 'images.get': {
+        const { id } = z.object({ id: z.string().uuid() }).parse(message.input);
+        return collectionStore.imageAsset(id);
+      }
       case 'books.flags': {
         const { id, flags } = z
           .object({ id: z.string().uuid(), flags: bookFlagsSchema })
@@ -67,13 +79,18 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
       case 'jobs.write':
       case 'jobs.cancel':
         await ensureRunner();
-        return sendExtensionMessage('runner', message.method, message.input);
+        return sendExtensionMessage(
+          'runner',
+          message.method,
+          message.input,
+          resolveLocale(message.locale),
+        );
       default:
-        throw new Error('扩展请求不可用。');
+        throw new AppError('error.extensionRequest');
     }
   })().then(
     (value) => respond({ ok: true, value }),
-    (error) => respond({ ok: false, error: messageError(error) }),
+    (error) => respond({ ok: false, ...errorResponse(error, resolveLocale(message.locale)) }),
   );
   return true;
 });

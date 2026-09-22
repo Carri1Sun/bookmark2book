@@ -1,15 +1,7 @@
+import { useI18n, useMessageState } from './lib/i18n';
+import { message } from '../shared/i18n';
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
-import {
-  BookOpen,
-  Check,
-  Grid2X2,
-  List,
-  LoaderCircle,
-  Plus,
-  Search,
-  Settings,
-  X,
-} from 'lucide-react';
+import { BookOpen, Check, LoaderCircle, Plus, Search, Settings, X } from 'lucide-react';
 import type { Book } from '../shared/types';
 import { api } from './lib/api';
 import { BookCover } from './components/BookCover';
@@ -18,6 +10,7 @@ import type { MedalTier } from '../shared/featured-medals';
 import type { BookFlags } from '../shared/book-flags';
 import { compareBooks } from '../shared/book-order';
 import { FixedHeader } from './components/FixedHeader';
+import { LayoutToggle } from './components/LayoutToggle';
 import { BookDocument } from './components/BookDocument';
 import {
   captureOpening,
@@ -43,16 +36,22 @@ function currentView(): View {
       ? { page: 'studio' }
       : { page: 'library' };
 }
-function Brand({ onClick, label = 'Tabbit 文集' }: { onClick: () => void; label?: string }) {
+function Brand({ onClick, label }: { onClick: () => void; label?: string }) {
+  const { t } = useI18n();
   return (
-    <button className="brand" onClick={onClick} aria-label={`${label}，回到文集首页`}>
+    <button
+      className="brand"
+      onClick={onClick}
+      aria-label={t('brand.home', { name: label || t('brand.name') })}
+    >
       <img className="brand-logo" src="./app-logo.png" alt="" width={32} height={32} />
-      <span className="brand-name">{label}</span>
-      <span className="brand-beta">Beta</span>
+      <span className="brand-name">{label || t('brand.name')}</span>
+      <span className="brand-beta">{t('common.beta')}</span>
     </button>
   );
 }
 export default function App() {
+  const { t } = useI18n();
   const [view, setView] = useState<View>(currentView);
   const [books, setBooks] = useState<Book[]>([]);
   const [loading, setLoading] = useState(true);
@@ -62,8 +61,8 @@ export default function App() {
   const [settingsOpen, setSettingsOpen] = useState(
     new URLSearchParams(location.search).has('settings'),
   );
-  const [toast, setToast] = useState('');
-  const [error, setError] = useState('');
+  const [toast, setToast] = useMessageState();
+  const [error, setError] = useMessageState();
   const [opening, setOpening] = useState<OpeningState | null>(null);
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const finishOpening = useCallback(() => {
@@ -76,7 +75,7 @@ export default function App() {
       setBooks(await api.books());
       setError('');
     } catch (e) {
-      setError((e as Error).message);
+      setError(e);
     } finally {
       setLoading(false);
     }
@@ -120,7 +119,7 @@ export default function App() {
     navigate({ page: 'reader', bookId: current.id });
     setOpening(transition);
   }
-  function notice(text: string) {
+  function notice(text: unknown) {
     setToast(text);
     clearTimeout(toastTimer.current);
     toastTimer.current = setTimeout(() => setToast(''), 3500);
@@ -138,14 +137,14 @@ export default function App() {
       notice(
         flags.pinned !== undefined
           ? flags.pinned
-            ? '已置顶文集。'
-            : '已取消置顶。'
+            ? message('notice.pinned')
+            : message('notice.unpinned')
           : flags.editorial?.action === 'approve'
-            ? '审核已通过，已设为编辑精选。'
-            : '已取消编辑精选。',
+            ? message('notice.approved')
+            : message('notice.unfeatured'),
       );
     } catch (error) {
-      notice((error as Error).message || '保存失败，请重试。');
+      notice(error);
     }
   }
   async function equipMedal(current: Book, tier: MedalTier) {
@@ -155,9 +154,9 @@ export default function App() {
   async function exportCurrent(current: Book) {
     try {
       await downloadBook(current);
-      notice('已导出独立 HTML，离线也能阅读。');
+      notice(message('notice.exported'));
     } catch {
-      notice('导出失败，请重试。');
+      notice(message('error.export'));
     }
   }
   return (
@@ -181,55 +180,45 @@ export default function App() {
                 <Brand
                   label={
                     view.page === 'editorial'
-                      ? '申请编辑精选'
+                      ? t('menu.apply')
                       : view.page === 'studio'
-                        ? '创建文集'
-                        : 'Tabbit 文集'
+                        ? t('library.create')
+                        : t('brand.name')
                   }
                   onClick={() => navigate({ page: 'library' })}
                 />
-                <div className="header-actions" role="group" aria-label="文集操作">
+                <div className="header-actions" role="group" aria-label={t('library.actions')}>
                   {view.page === 'library' && (
                     <>
                       <label className="library-search">
                         <Search size={16} aria-hidden="true" />
                         <input
-                          placeholder="搜索文集"
+                          placeholder={t('library.search')}
                           value={search}
                           onChange={(event) => setSearch(event.target.value)}
-                          aria-label="搜索文集"
+                          aria-label={t('library.search')}
                         />
                         {search && (
-                          <button aria-label="清空搜索" onClick={() => setSearch('')}>
+                          <button
+                            aria-label={t('common.clearSearch')}
+                            onClick={() => setSearch('')}
+                          >
                             <X size={14} />
                           </button>
                         )}
                       </label>
-                      <button
-                        className="layout-toggle"
-                        role="switch"
-                        aria-label="列表视图"
-                        aria-checked={layout === 'list'}
-                        title={layout === 'grid' ? '切换为列表视图' : '切换为封面视图'}
-                        onClick={() =>
-                          setLayout((current) => (current === 'grid' ? 'list' : 'grid'))
-                        }
-                      >
-                        <span className="layout-toggle-thumb" aria-hidden="true" />
-                        <Grid2X2 size={15} aria-hidden="true" />
-                        <List size={16} aria-hidden="true" />
-                      </button>
+                      <LayoutToggle layout={layout} onChange={setLayout} />
                     </>
                   )}
                   <button
                     className={`header-settings${health === 'offline' || health === 'missing' ? ' needs-attention' : ''}`}
-                    aria-label="设置"
+                    aria-label={t('common.settings')}
                     title={
                       health === 'missing'
-                        ? '设置 · 配置 API Key'
+                        ? t('library.configureKey')
                         : health === 'offline'
-                          ? '设置 · 服务未连接'
-                          : '设置'
+                          ? t('library.offline')
+                          : t('common.settings')
                     }
                     onClick={() => setSettingsOpen(true)}
                   >
@@ -238,7 +227,7 @@ export default function App() {
                   {view.page === 'library' && (
                     <button className="button primary" onClick={() => navigate({ page: 'studio' })}>
                       <Plus size={17} />
-                      添加
+                      {t('common.add')}
                     </button>
                   )}
                 </div>
@@ -254,7 +243,7 @@ export default function App() {
                 await refresh();
                 setSearch('');
                 navigate({ page: 'library' });
-                notice('文集已添加到首页。');
+                notice(message('notice.added'));
               }}
             />
           ) : view.page === 'editorial' && book ? (
@@ -270,7 +259,7 @@ export default function App() {
                   previous.map((item) => (item.id === updated.id ? updated : item)),
                 );
                 navigate({ page: 'library' });
-                notice('申请已提交，精选审核中。');
+                notice(message('notice.submitted'));
               }}
             />
           ) : view.page === 'reader' || view.page === 'editorial' ? (
@@ -278,26 +267,30 @@ export default function App() {
               {loading ? (
                 <>
                   <LoaderCircle className="spin" />
-                  正在加载…
+                  {t('common.loading')}
                 </>
               ) : (
                 <>
-                  <h1>未找到文集</h1>
-                  <p>{error || '这本文集可能已被移除。'}</p>
+                  <h1>{t('library.notFound')}</h1>
+                  <p>{error || t('library.removed')}</p>
                   <button className="button primary" onClick={() => navigate({ page: 'library' })}>
-                    回到文集
+                    {t('common.back')}
                   </button>
                 </>
               )}
             </div>
           ) : (
             <main className="page-width">
-              <section className="library-section" id="library" aria-label="文集">
+              <section
+                className="library-section"
+                id="library"
+                aria-label={t('library.collections')}
+              >
                 {error && (
                   <div className="error-message" role="alert">
                     {error}
                     <button className="text-button" onClick={() => void refresh()}>
-                      重新连接
+                      {t('common.retryConnect')}
                     </button>
                   </div>
                 )}
@@ -307,7 +300,7 @@ export default function App() {
                       <button
                         className={`book-display display-${item.palette}`}
                         onClick={(event) => openCollection(item, event.currentTarget)}
-                        aria-label={`阅读 ${item.title.replace(/\n/g, '')}`}
+                        aria-label={t('library.read', { title: item.title.replace(/\n/g, '') })}
                       >
                         <BookCover
                           title={item.title}
@@ -336,7 +329,9 @@ export default function App() {
                             onApply={() => navigate({ page: 'editorial', bookId: item.id })}
                           />
                         </div>
-                        <p className="book-meta">{collectionArticles(item).length} 篇文章</p>
+                        <p className="book-meta">
+                          {t('common.pages', { count: collectionArticles(item).length })}
+                        </p>
                       </div>
                     </article>
                   ))}
@@ -344,12 +339,12 @@ export default function App() {
                 {!displayed.length && (
                   <div className="empty-library">
                     <BookOpen size={30} strokeWidth={1.4} />
-                    <h2>{search ? '没有匹配的文集' : '暂无文集'}</h2>
+                    <h2>{search ? t('library.noMatch') : t('library.empty')}</h2>
                     <button
                       className="button secondary"
                       onClick={() => (search ? setSearch('') : navigate({ page: 'studio' }))}
                     >
-                      {search ? '清空搜索' : '添加文集'}
+                      {search ? t('common.clearSearch') : t('library.add')}
                     </button>
                   </div>
                 )}
@@ -372,7 +367,9 @@ export default function App() {
             }}
             onSaved={(settings) => {
               setHealth(settings.hasKey ? 'ready' : 'missing');
-              notice(settings.hasKey ? '设置已保存。' : '密钥已删除。');
+              notice(
+                settings.hasKey ? message('notice.settingsSaved') : message('notice.keyRemoved'),
+              );
             }}
           />
         </Suspense>

@@ -1,3 +1,4 @@
+import { useI18n } from '../lib/i18n';
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Check, Download, Ellipsis, Pin, Star, Clock3 } from 'lucide-react';
@@ -13,6 +14,7 @@ export function BookBadges({
   book: Book;
   onEquip?: (tier: MedalTier) => Promise<void>;
 }) {
+  const { t } = useI18n();
   if (!book.pinned && !book.featured && book.editorial?.status !== 'pending') return null;
   return (
     <span className="book-badges">
@@ -20,7 +22,7 @@ export function BookBadges({
       {book.pinned && (
         <span className="book-badge book-badge-pin">
           <Pin size={12} aria-hidden="true" />
-          置顶
+          {t('badge.pinned')}
         </span>
       )}
       {!book.featured && book.editorial?.status === 'pending' && <PendingBadge />}
@@ -29,10 +31,11 @@ export function BookBadges({
 }
 
 export function PendingBadge() {
+  const { t } = useI18n();
   return (
     <span className="book-badge book-badge-pending">
       <Clock3 size={12} aria-hidden="true" />
-      精选审核中
+      {t('badge.pending')}
     </span>
   );
 }
@@ -52,6 +55,7 @@ export function BookActions({
   onExport: () => Promise<void>;
   onApply: () => void;
 }) {
+  const { t } = useI18n();
   const id = useId();
   const trigger = useRef<HTMLButtonElement>(null);
   const menu = useRef<HTMLDivElement>(null);
@@ -112,8 +116,8 @@ export function BookActions({
       <button
         ref={trigger}
         className="icon-button book-more"
-        aria-label={`更多操作：${book.title.replace(/\n/g, '')}`}
-        title="更多"
+        aria-label={t('menu.label', { title: book.title.replace(/\n/g, '') })}
+        title={t('common.more')}
         aria-haspopup="menu"
         aria-expanded={open}
         aria-controls={open ? id : undefined}
@@ -135,7 +139,7 @@ export function BookActions({
             ref={menu}
             id={id}
             role="menu"
-            aria-label={`${book.title}的更多操作`}
+            aria-label={t('menu.label', { title: book.title })}
             className="book-actions-menu"
             style={position}
             onKeyDown={(event) => {
@@ -166,7 +170,7 @@ export function BookActions({
               onClick={() => void run(() => onUpdate({ pinned: !book.pinned }))}
             >
               <Pin size={16} aria-hidden="true" />
-              <span>{book.pinned ? '取消置顶' : '置顶'}</span>
+              <span>{book.pinned ? t('menu.unpin') : t('menu.pin')}</span>
               {book.pinned && <Check size={14} className="menu-check" aria-hidden="true" />}
             </button>
             <button
@@ -183,8 +187,8 @@ export function BookActions({
               <Star size={16} aria-hidden="true" />
               <span>
                 {book.featured || book.editorial?.status === 'pending'
-                  ? '取消编辑精选'
-                  : '申请编辑精选'}
+                  ? t('menu.cancelEditorial')
+                  : t('menu.apply')}
               </span>
             </button>
             {book.editorial?.status === 'pending' && (
@@ -193,13 +197,13 @@ export function BookActions({
                 onClick={() => void run(() => onUpdate({ editorial: { action: 'approve' } }))}
               >
                 <Check size={16} aria-hidden="true" />
-                <span>[debug] 通过审核</span>
+                <span>{t('menu.approve')}</span>
               </button>
             )}
             <div className="book-menu-divider" role="separator" />
             <button role="menuitem" onClick={() => void run(onExport)}>
               <Download size={16} aria-hidden="true" />
-              <span>导出为 HTML</span>
+              <span>{t('common.exportAs')}</span>
             </button>
           </div>,
           document.body,

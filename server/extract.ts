@@ -1,3 +1,7 @@
+import { AppError, defaultLocale, errorResponse, type Locale } from '../shared/i18n';
+import { readPageMetadata } from '../shared/page-metadata';
+import { readImageCandidates } from '../shared/page-images';
+import { productId } from '../shared/branding';
 import dns from 'node:dns';
 import ipaddr from 'ipaddr.js';
 import { Agent, fetch } from 'undici';
@@ -23,7 +27,7 @@ export function validatePublicUrl(raw: string): URL {
     url.password ||
     (url.port && !['80', '443'].includes(url.port))
   )
-    throw new Error('仅支持公开的 HTTP/HTTPS 网页。');
+    throw new AppError('error.publicHttp');
   const hostname = url.hostname.replace(/^\[|\]$/g, '');
   if (
     hostname === 'localhost' ||
@@ -31,7 +35,7 @@ export function validatePublicUrl(raw: string): URL {
     hostname.endsWith('.localhost') ||
     (ipaddr.isValid(hostname) && !isPublicAddress(hostname))
   )
-    throw new Error('不读取本机或内网地址。');
+    throw new AppError('error.privateAddress');
   return url;
 }
 // Resolve to public addresses inside the actual socket lookup. Some local network
@@ -57,22 +61,22 @@ export async function publicLookup(hostname: string): Promise<dns.LookupAddress[
         signal: AbortSignal.timeout(8000),
       },
     );
-    if (!response.ok) throw new Error('公网域名解析失败。');
+    if (!response.ok) throw new AppError('error.dns');
     const result = (await response.json()) as {
       Status?: number;
       Answer?: { type: number; data: string }[];
     };
-    if (result.Status !== 0) throw new Error('公网域名解析失败。');
+    if (result.Status !== 0) throw new AppError('error.dns');
     addresses = (result.Answer || [])
       .filter((answer) => answer.type === 1)
       .map((answer) => ({ address: answer.data, family: 4 }));
   }
   if (!addresses.length || addresses.some((entry) => !isPublicAddress(entry.address)))
-    throw new Error('不读取本机或内网地址。');
+    throw new AppError('error.privateAddress');
   dnsCache.set(hostname, { expires: Date.now() + 60_000, addresses });
   return addresses;
 }
-const dispatcher = new Agent({
+export const publicDispatcher = new Agent({
   connect: {
     lookup(hostname, options, callback) {
       void publicLookup(hostname)
@@ -86,30 +90,34 @@ const dispatcher = new Agent({
 });
 const MAX_BYTES = 2_500_000;
 const MAX_CONTENT = 14000;
-export async function extractSource(bookmark: Bookmark, signal: AbortSignal): Promise<Source> {
+export async function extractSource(
+  bookmark: Bookmark,
+  signal: AbortSignal,
+  locale: Locale = defaultLocale,
+): Promise<Source> {
   try {
     let url = validatePublicUrl(bookmark.url);
     let html = '';
     for (let redirects = 0; redirects <= 4; redirects++) {
       const response = await fetch(url, {
-        dispatcher,
+        dispatcher: publicDispatcher,
         redirect: 'manual',
         signal: AbortSignal.any([signal, AbortSignal.timeout(18000)]),
         headers: {
-          'User-Agent': 'BookmarkPress/0.1 (personal reading; public pages only)',
+          'User-Agent': `${productId}/0.1 (personal reading; public pages only)`,
           Accept: 'text/html,application/xhtml+xml,text/plain',
         },
       });
       if (response.status >= 300 && response.status < 400) {
         const location = response.headers.get('location');
         await response.body?.cancel();
-        if (!location || redirects === 4) throw new Error('网页跳转次数过多。');
+        if (!location || redirects === 4) throw new AppError('error.redirects');
         url = validatePublicUrl(new URL(location, url).href);
         continue;
       }
       if (!response.ok) {
         await response.body?.cancel();
-        throw new Error(`网页暂时无法访问（${response.status}）。`);
+        throw new AppError('error.pageStatus', { status: response.status });
       }
       if (
         !/(text\/html|application\/xhtml\+xml|text\/plain)/i.test(
@@ -117,17 +125,17 @@ export async function extractSource(bookmark: Bookmark, signal: AbortSignal): Pr
         )
       ) {
         await response.body?.cancel();
-        throw new Error('暂不支持此文件类型，可选择文章网页。');
+        throw new AppError('error.fileType');
       }
       if (Number(response.headers.get('content-length') || 0) > MAX_BYTES) {
         await response.body?.cancel();
-        throw new Error('网页过大，未读取正文。');
+        throw new AppError('error.pageSize');
       }
       const chunks: Uint8Array[] = [];
       let size = 0;
       for await (const chunk of response.body!) {
         size += chunk.byteLength;
-        if (size > MAX_BYTES) throw new Error('网页过大，未读取正文。');
+        if (size > MAX_BYTES) throw new AppError('error.pageSize');
         chunks.push(chunk);
       }
       html = Buffer.concat(chunks).toString('utf8');
@@ -136,11 +144,9 @@ export async function extractSource(bookmark: Bookmark, signal: AbortSignal): Pr
     const dom = new JSDOM(html, { url: url.href });
     try {
       const doc = dom.window.document;
+      const imageCandidates = readImageCandidates(doc, url.href);
       doc.querySelectorAll('script,style,noscript,iframe,form').forEach((el) => el.remove());
-      const description =
-        doc
-          .querySelector('meta[name="description"],meta[property="og:description"]')
-          ?.getAttribute('content') || '';
+      const pageMetadata = readPageMetadata(doc);
       const article = new Readability(doc.cloneNode(true) as Document).parse();
       const title = (article?.title || doc.title || bookmark.title).trim().slice(0, 500);
       const text = article?.textContent?.replace(/\s+/g, ' ').trim() || '';
@@ -148,14 +154,18 @@ export async function extractSource(bookmark: Bookmark, signal: AbortSignal): Pr
         return {
           ...bookmark,
           title,
+          pageMetadata,
+          imageCandidates,
           status: 'metadata',
-          content: description.slice(0, 1200),
-          error: '正文较少或需登录，仅使用标题与网页简介。',
+          content: pageMetadata.description,
+          ...errorResponse(new AppError('error.metadataOnly'), locale),
           wordCount: text.length,
         };
       return {
         ...bookmark,
         title,
+        pageMetadata,
+        imageCandidates,
         status: text.length > MAX_CONTENT ? 'excerpt' : 'full',
         content: text.slice(0, MAX_CONTENT),
         wordCount: text.length,
@@ -165,10 +175,13 @@ export async function extractSource(bookmark: Bookmark, signal: AbortSignal): Pr
     }
   } catch (error) {
     if (signal.aborted) throw error;
-    const message = error instanceof Error ? error.message : '';
-    const safe = /^(网页|正文|不读取|仅支持|暂不支持)/.test(message)
-      ? message
-      : '网页无法读取，可能需要登录或暂时不可访问。';
-    return { ...bookmark, status: 'unavailable', error: safe };
+    return {
+      ...bookmark,
+      status: 'unavailable',
+      ...errorResponse(
+        error instanceof AppError ? error : new AppError('error.pageUnavailable'),
+        locale,
+      ),
+    };
   }
 }

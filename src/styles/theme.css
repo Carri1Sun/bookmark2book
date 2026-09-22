@@ -68,6 +68,24 @@
   --page-light: #faf8ef;
   --page-shade: #f6f3e8;
   --cover-inner: #eeeade;
+  --card-shadow:
+    0 2px 4px color-mix(in srgb, var(--shadow) 2%, transparent),
+    0 9px 24px -15px color-mix(in srgb, var(--shadow) 17%, transparent);
+  --card-shadow-hover:
+    0 6px 12px -8px color-mix(in srgb, var(--shadow) 16%, transparent),
+    0 20px 34px -20px color-mix(in srgb, var(--shadow) 28%, transparent);
+  --card-border-hover: color-mix(in srgb, var(--accent) 22%, var(--line));
+  --card-sheen: linear-gradient(
+    105deg,
+    transparent 35%,
+    color-mix(in srgb, var(--highlight) 28%, transparent) 49%,
+    transparent 63%
+  );
+  --cover-fallback-light: radial-gradient(
+    ellipse at 20% 10%,
+    color-mix(in srgb, var(--highlight) 38%, transparent),
+    transparent 65%
+  );
 
   /* Main collection covers: orange, clay, oat and warm charcoal. */
   --cover-forest-bg: var(--accent);

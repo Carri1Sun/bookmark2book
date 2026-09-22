@@ -29,12 +29,16 @@
   font: 500 28px/1.4 var(--sans);
 }
 .api-setting-field,
+.api-setting-field + .api-setting-field {
+  margin-top: 20px;
+}
 .collection-name-field {
   display: block;
   color: var(--accent-strong);
   font-size: 14px;
 }
 .api-setting-field input,
+.api-setting-field select,
 .collection-name-field input {
   display: block;
   width: 100%;
@@ -108,6 +112,7 @@ body {
 }
 button,
 input,
+select,
 textarea {
   font: inherit;
 }
@@ -124,6 +129,7 @@ button:disabled {
 button,
 a,
 input,
+select,
 textarea {
   outline-offset: 5px;
 }
@@ -132,6 +138,7 @@ a:focus-visible {
   outline: 2px solid var(--accent);
 }
 input,
+select,
 textarea {
   color: var(--ink);
   background: transparent;
@@ -139,6 +146,7 @@ textarea {
   border-radius: 10px;
 }
 input:focus,
+select:focus,
 textarea:focus {
   outline: 1px solid var(--accent);
   box-shadow: 0 0 0 3px var(--focus-ring);
@@ -3245,6 +3253,7 @@ a {
   backdrop-filter: blur(6px);
 }
 .api-setting-field input,
+.api-setting-field select,
 .collection-name-field input,
 .article-review-fields input,
 .article-review-fields textarea,

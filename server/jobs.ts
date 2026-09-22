@@ -1,3 +1,4 @@
+import { AppError, defaultLocale, errorResponse, jobMessage } from '../shared/i18n';
 import { z } from 'zod';
 import { config } from './config';
 import { createModelClient } from '../shared/model';
@@ -40,8 +41,11 @@ export async function restoreJobs() {
   for (const job of await readRecords<Job>('jobs')) {
     if (['extracting', 'analyzing', 'outlining', 'writing'].includes(job.status)) {
       job.status = 'failed';
-      job.error = '本地服务重启，任务已中断。已保存素材，可重新发起整理。';
-      job.message = job.error;
+      Object.assign(
+        job,
+        jobMessage(job.locale, 'error.serverRestart'),
+        errorResponse(new AppError('error.serverRestart'), job.locale),
+      );
       await persist(job);
     }
     jobs.set(job.id, job);
@@ -64,6 +68,7 @@ export async function createJob(input: z.infer<typeof createJobSchema>): Promise
     .map((item, index) => ({ ...item, id: `s${index + 1}` }));
   const job: Job = {
     id: crypto.randomUUID(),
+    locale: input.locale,
     bookmarks,
     sources: [],
     palette: input.palette,
@@ -73,7 +78,7 @@ export async function createJob(input: z.infer<typeof createJobSchema>): Promise
     model: settings.model,
     status: 'extracting',
     progress: 0,
-    message: '正在读取网页…',
+    ...jobMessage(input.locale, 'job.reading'),
     createdAt: new Date().toISOString(),
   };
   jobs.set(job.id, job);
@@ -93,12 +98,12 @@ function launch(job: Job, work: (signal: AbortSignal) => Promise<void>) {
   void work(controller.signal)
     .catch(async (error) => {
       const cancelled = controller.signal.aborted;
-      const message = cancelled
-        ? '已停止整理，原始书签未受影响。'
-        : error instanceof Error && error.name !== 'TimeoutError'
-          ? error.message
-          : '读取或生成超时，请稍后重试。';
-      await update(job, { status: cancelled ? 'cancelled' : 'failed', error: message, message });
+      const failure = errorResponse(cancelled ? new AppError('job.stopped') : error, job.locale);
+      await update(job, {
+        status: cancelled ? 'cancelled' : 'failed',
+        ...jobMessage(job.locale, failure.errorDetails.key, failure.errorDetails.params),
+        ...failure,
+      });
     })
     .catch(() => console.error('Unable to save job state.'))
     .finally(() => {
@@ -106,12 +111,13 @@ function launch(job: Job, work: (signal: AbortSignal) => Promise<void>) {
     });
 }
 export async function writeBook(job: Job, outline: Outline, articles?: ArticleEdit[]) {
-  if (job.status !== 'outline_ready') throw new Error('当前任务尚未准备好保存文集。');
+  if (job.status !== 'outline_ready') throw new AppError('error.notReady');
   validateReferences(outline, job.sources);
   const book = assembleCollection(
     {
       id: crypto.randomUUID(),
       palette: job.palette,
+      locale: job.locale || defaultLocale,
       coverImage: job.coverImage,
       createdAt: new Date().toISOString(),
       model: job.model || config.model,
@@ -120,14 +126,19 @@ export async function writeBook(job: Job, outline: Outline, articles?: ArticleEd
     job.sources,
     articles,
   );
-  await update(job, { outline, status: 'writing', progress: 95, message: '正在保存文集…' });
+  await update(job, {
+    outline,
+    status: 'writing',
+    progress: 95,
+    ...jobMessage(job.locale, 'job.saving'),
+  });
   launch(job, async (signal) => {
     signal.throwIfAborted();
     await saveRecord('books', book);
     await update(job, {
       status: 'completed',
       progress: 100,
-      message: '文集已保存。',
+      ...jobMessage(job.locale, 'job.saved'),
       bookId: book.id,
     });
   });
@@ -135,5 +146,5 @@ export async function writeBook(job: Job, outline: Outline, articles?: ArticleEd
 export async function cancelJob(job: Job) {
   controllers.get(job.id)?.abort();
   if (job.status === 'outline_ready')
-    await update(job, { status: 'cancelled', message: '草稿已取消。' });
+    await update(job, { status: 'cancelled', ...jobMessage(job.locale, 'job.draftCancelled') });
 }

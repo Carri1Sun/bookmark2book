@@ -1,3 +1,4 @@
+import { AppError, defaultLocale, errorResponse, jobMessage } from '../../shared/i18n';
 import { analyzeCollection, type AnalysisDependencies } from '../../shared/analysis';
 import { assembleCollection } from '../../shared/collection';
 import { createModelClient } from '../../shared/model';
@@ -11,7 +12,6 @@ import {
 } from '../../shared/types';
 import { deduplicateBookmarks } from '../lib/bookmarks';
 import type { CollectionStore } from './database';
-import { messageError } from './protocol';
 
 const working = new Set(['extracting', 'analyzing', 'outlining', 'writing']);
 export function createExtensionJobs(dependencies: {
@@ -39,7 +39,7 @@ export function createExtensionJobs(dependencies: {
   }
   async function update(job: Job, change: Partial<Job>) {
     if (job.status === 'cancelled' && change.status !== 'cancelled')
-      throw new DOMException('整理已取消', 'AbortError');
+      throw new DOMException('Aborted', 'AbortError');
     Object.assign(job, change);
     await persist(job);
   }
@@ -47,7 +47,11 @@ export function createExtensionJobs(dependencies: {
     for (const job of await store.jobs()) {
       if (working.has(job.status)) {
         job.status = 'failed';
-        job.message = job.error = '浏览器已重启，整理已中断。可以使用已选书签重新生成。';
+        Object.assign(
+          job,
+          jobMessage(job.locale, 'error.browserRestart'),
+          errorResponse(new AppError('error.browserRestart'), job.locale),
+        );
         await persist(job);
       }
       jobs.set(job.id, job);
@@ -55,7 +59,7 @@ export function createExtensionJobs(dependencies: {
   })();
   function find(id: string) {
     const job = jobs.get(id);
-    if (!job) throw new Error('未找到这份草稿，请重新选择收藏。');
+    if (!job) throw new AppError('error.draftNotFound');
     return job;
   }
   return {
@@ -68,16 +72,17 @@ export function createExtensionJobs(dependencies: {
       await ready;
       const input = createJobSchema.parse(value);
       const settings = await dependencies.settings();
-      if (!settings.apiKey) throw new Error('请先在设置中填写 API Key。');
+      if (!settings.apiKey) throw new AppError('error.missingKey');
       if ([...jobs.values()].filter((job) => working.has(job.status)).length >= 2)
-        throw new Error('已有两个文集正在整理，请等其中一个完成。');
+        throw new AppError('error.busy');
       const bookmarks = deduplicateBookmarks(input.bookmarks).map((item, index) => ({
         ...item,
         id: `s${index + 1}`,
       }));
-      if (!bookmarks.length) throw new Error('请至少选择一个可用书签。');
+      if (!bookmarks.length) throw new AppError('error.noBookmarks');
       const job: Job = {
         id: crypto.randomUUID(),
+        locale: input.locale,
         bookmarks,
         sources: [],
         palette: input.palette,
@@ -87,7 +92,7 @@ export function createExtensionJobs(dependencies: {
         model: settings.model,
         status: 'extracting',
         progress: 0,
-        message: '正在读取网页…',
+        ...jobMessage(input.locale, 'job.reading'),
         createdAt: new Date().toISOString(),
       };
       jobs.set(job.id, job);
@@ -106,15 +111,14 @@ export function createExtensionJobs(dependencies: {
       })
         .catch(async (error) => {
           const cancelled = controller.signal.aborted;
-          const message = cancelled
-            ? '已停止整理，原始书签未受影响。'
-            : error instanceof Error && error.name === 'TimeoutError'
-              ? 'API 读取或生成超时，请稍后重试。'
-              : messageError(error);
+          const failure = errorResponse(
+            cancelled ? new AppError('job.stopped') : error,
+            job.locale,
+          );
           await update(job, {
             status: cancelled ? 'cancelled' : 'failed',
-            message,
-            error: message,
+            ...jobMessage(job.locale, failure.errorDetails.key, failure.errorDetails.params),
+            ...failure,
           });
         })
         .catch(() => {})
@@ -124,7 +128,7 @@ export function createExtensionJobs(dependencies: {
     async write(id: string, value: unknown) {
       await ready;
       const job = find(id);
-      if (job.status !== 'outline_ready') throw new Error('当前任务尚未准备好保存文集。');
+      if (job.status !== 'outline_ready') throw new AppError('error.notReady');
       const input = writeJobSchema.parse(value);
       validateReferences(input.outline, job.sources);
       const book = assembleCollection(
@@ -132,6 +136,7 @@ export function createExtensionJobs(dependencies: {
           id: crypto.randomUUID(),
           createdAt: new Date().toISOString(),
           palette: job.palette,
+          locale: job.locale || defaultLocale,
           coverImage: job.coverImage,
           model: job.model,
         },
@@ -146,7 +151,7 @@ export function createExtensionJobs(dependencies: {
         bookId: book.id,
         status: 'completed',
         progress: 100,
-        message: '文集已保存。',
+        ...jobMessage(job.locale, 'job.saved'),
         sources: book.sources,
       };
       try {
@@ -163,9 +168,9 @@ export function createExtensionJobs(dependencies: {
       await ready;
       const job = find(id);
       if (job.status === 'completed' || job.status === 'cancelled') return { ok: true };
-      if (job.status === 'writing') throw new Error('当前文集正在保存，请稍候。');
+      if (job.status === 'writing') throw new AppError('error.saving');
       controllers.get(id)?.abort();
-      await update(job, { status: 'cancelled', message: '已停止整理，原始书签未受影响。' });
+      await update(job, { status: 'cancelled', ...jobMessage(job.locale, 'job.stopped') });
       return { ok: true };
     },
   };

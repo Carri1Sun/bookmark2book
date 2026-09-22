@@ -416,3 +416,17 @@
     animation: none;
   }
 }
+
+/* English labels need room for full medal names and milestones. */
+:lang(en) .medal-popover {
+  width: min(370px, calc(100vw - 24px));
+}
+:lang(en) .medal-preview {
+  width: 90px;
+}
+.medal-description {
+  min-width: 0;
+}
+:lang(en) .medal-description small {
+  white-space: normal;
+}

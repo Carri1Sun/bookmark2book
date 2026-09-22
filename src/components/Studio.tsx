@@ -1,3 +1,5 @@
+import { useI18n, useMessageState } from '../lib/i18n';
+import { AppError } from '../../shared/i18n';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowDown,
@@ -28,6 +30,7 @@ import {
 } from '../lib/bookmarks';
 import { fileToCoverDataUrl } from '../lib/image';
 import { BookCover, palettes } from './BookCover';
+import { collectionDraftKey } from '../lib/storage-keys';
 import './Studio.css';
 
 type SourceMode = 'browser' | 'links';
@@ -45,6 +48,7 @@ function CheckBox({
   onChange: () => void;
   label: string;
 }) {
+  const { t } = useI18n();
   const ref = useRef<HTMLInputElement>(null);
   useEffect(() => {
     if (ref.current) ref.current.indeterminate = mixed;
@@ -57,7 +61,7 @@ function CheckBox({
       checked={checked}
       disabled={disabled}
       onChange={onChange}
-      title={disabled ? '已随上级文件夹收录' : undefined}
+      title={disabled ? t('studio.includedParent') : undefined}
       aria-label={label}
     />
   );
@@ -81,6 +85,7 @@ function FolderBranch({
   ancestorSelected?: boolean;
   depth?: number;
 }) {
+  const { t } = useI18n();
   const [open, setOpen] = useState(true);
   if (node.url) return null;
   const included = selectedFolders.has(node.id) || ancestorSelected;
@@ -96,7 +101,7 @@ function FolderBranch({
           <button
             className="tree-toggle"
             onClick={() => setOpen(!open)}
-            aria-label={`${open ? '折叠' : '展开'}${node.title}`}
+            aria-label={t(open ? 'studio.collapse' : 'studio.expand', { title: node.title })}
           >
             {open ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
           </button>
@@ -110,11 +115,11 @@ function FolderBranch({
             toggleFolder(node);
             if (!included) onSelectFolder(node);
           }}
-          label={`选择文件夹 ${node.title}`}
+          label={t('studio.selectFolder', { title: node.title })}
         />
         <button className="folder-name" onClick={() => onActivate(node.id)}>
           <Folder size={14} />
-          <span>{node.title || '书签'}</span>
+          <span>{node.title || t('studio.bookmarks')}</span>
           <small>{ids.length}</small>
         </button>
       </div>
@@ -154,6 +159,7 @@ export function Studio({
   configured: boolean;
   onSettings: () => void;
 }) {
+  const { t, locale } = useI18n();
   const isExtension = Boolean(globalThis.chrome?.bookmarks?.getTree);
   const [mode, setMode] = useState<SourceMode>('browser');
   const [readingBookmarks, setReadingBookmarks] = useState(isExtension);
@@ -166,12 +172,23 @@ export function Studio({
   const [direction, setDirection] = useState('');
   const [collectionTitle, setCollectionTitle] = useState('');
   const [coverImage, setCoverImage] = useState('');
-  const [error, setError] = useState('');
+  const [error, setError] = useMessageState();
   const [busy, setBusy] = useState(false);
   const [job, setJob] = useState<Job | null>(null);
   const [outline, setOutline] = useState<Outline | null>(null);
   const [articles, setArticles] = useState<ArticleEdit[]>([]);
-  const [pollError, setPollError] = useState('');
+  const [pollError, setPollError] = useMessageState();
+  useEffect(() => {
+    setNodes((current) =>
+      current.map((node) =>
+        node.id === 'links' && mode === 'links'
+          ? { ...node, title: t('studio.pasted') }
+          : node.id === 'retry'
+            ? { ...node, title: t('studio.previous') }
+            : node,
+      ),
+    );
+  }, [locale]);
   const all = useMemo(() => flattenBookmarks(nodes), [nodes]);
   const activeNode = activeFolder === 'all' ? undefined : findNode(nodes, activeFolder);
   const visible = useMemo(
@@ -222,7 +239,7 @@ export function Studio({
       try {
         useNodes(await readBrowserBookmarks());
       } catch (e) {
-        setError((e as Error).message);
+        setError(e);
       } finally {
         setReadingBookmarks(false);
       }
@@ -232,15 +249,15 @@ export function Studio({
     if (isExtension)
       void readBrowserBookmarks()
         .then((data) => useNodes(data))
-        .catch((e) => setError(e.message))
+        .catch((e) => setError(e))
         .finally(() => setReadingBookmarks(false));
-    const stored = localStorage.getItem('bookmark-press-draft');
+    const stored = localStorage.getItem(collectionDraftKey);
     if (stored)
       void api
         .job(stored)
         .then((draft) => {
           if (['completed', 'cancelled'].includes(draft.status)) {
-            localStorage.removeItem('bookmark-press-draft');
+            localStorage.removeItem(collectionDraftKey);
             return;
           }
           setJob(draft);
@@ -273,18 +290,18 @@ export function Studio({
           );
         }
         if (next.status === 'completed' && next.bookId) {
-          localStorage.removeItem('bookmark-press-draft');
+          localStorage.removeItem(collectionDraftKey);
           onComplete(next.bookId);
           return;
         }
         if (['failed', 'cancelled'].includes(next.status)) {
-          localStorage.removeItem('bookmark-press-draft');
+          localStorage.removeItem(collectionDraftKey);
           return;
         }
         if (workingStatuses.includes(next.status)) timeout = setTimeout(poll, 1500);
       } catch (e) {
         if (stopped) return;
-        setPollError((e as Error).message);
+        setPollError(e);
         timeout = setTimeout(poll, 4000);
       }
     };
@@ -305,7 +322,7 @@ export function Studio({
     setError('');
     try {
       if (!(await api.allowSites(picked.map((bookmark) => bookmark.url))))
-        throw new Error('未获得所选网页的访问权限，请允许读取后重试。');
+        throw new AppError('error.pagePermission');
       const next = await api.create(
         picked,
         palette,
@@ -314,9 +331,9 @@ export function Studio({
         coverImage || undefined,
       );
       setJob(next);
-      localStorage.setItem('bookmark-press-draft', next.id);
+      localStorage.setItem(collectionDraftKey, next.id);
     } catch (e) {
-      setError((e as Error).message);
+      setError(e);
     } finally {
       setBusy(false);
     }
@@ -328,13 +345,13 @@ export function Studio({
     try {
       const next = await api.write(job.id, outline, articles);
       if (next.status === 'completed' && next.bookId) {
-        localStorage.removeItem('bookmark-press-draft');
+        localStorage.removeItem(collectionDraftKey);
         onComplete(next.bookId);
       } else {
         setJob(next);
       }
     } catch (e) {
-      setError((e as Error).message);
+      setError(e);
     } finally {
       setBusy(false);
     }
@@ -345,9 +362,9 @@ export function Studio({
     try {
       await api.cancel(job.id);
       setJob({ ...job, status: 'cancelled' });
-      localStorage.removeItem('bookmark-press-draft');
+      localStorage.removeItem(collectionDraftKey);
     } catch (e) {
-      setError((e as Error).message);
+      setError(e);
     } finally {
       setBusy(false);
     }
@@ -358,7 +375,7 @@ export function Studio({
         [
           {
             id: 'retry',
-            title: '上次选择的素材',
+            title: t('studio.previous'),
             children: job.bookmarks.map((item) => ({
               id: item.id,
               title: item.title,
@@ -388,7 +405,7 @@ export function Studio({
     <div className="studio studio-compact page-width">
       <div className="studio-heading">
         <div className="studio-steps">
-          {['选择收藏', '确认文章', '保存文集'].map((label, i) => (
+          {[t('studio.choose'), t('studio.review'), t('studio.save')].map((label, i) => (
             <div key={label} className={step >= i + 1 ? 'active' : ''}>
               <span>{step > i + 1 ? <Check size={12} /> : i + 1}</span>
               {label}
@@ -400,15 +417,15 @@ export function Studio({
       {!job ? (
         <>
           <div className="studio-intro">
-            <p>选择一个收藏夹中的文件夹创建为文集</p>
+            <p>{t('studio.chooseHint')}</p>
           </div>
           <div className="studio-grid">
             <section className="source-panel">
-              <div className="source-tabs" role="tablist" aria-label="素材来源">
+              <div className="source-tabs" role="tablist" aria-label={t('studio.source')}>
                 {(
                   [
-                    ['browser', '浏览器书签', BookOpen],
-                    ['links', '粘贴链接', Link],
+                    ['browser', t('studio.browser'), BookOpen],
+                    ['links', t('studio.links'), Link],
                   ] as const
                 ).map(([value, label, Icon]) => (
                   <button
@@ -425,20 +442,18 @@ export function Studio({
               </div>
               {mode === 'links' && (
                 <div className="link-input-area">
-                  <label htmlFor="links">粘贴要收录的文章链接，每行一个</label>
+                  <label htmlFor="links">{t('studio.linksLabel')}</label>
                   <textarea
                     id="links"
                     value={links}
-                    placeholder={
-                      'https://example.com/an-interesting-article\nhttps://example.com/another-idea'
-                    }
+                    placeholder={t('studio.linksExample')}
                     onChange={(event) => {
                       setLinks(event.target.value);
                       useNodes(
                         [
                           {
                             id: 'links',
-                            title: '粘贴的链接',
+                            title: t('studio.pasted'),
                             children: parseLinks(event.target.value),
                           },
                         ],
@@ -446,7 +461,7 @@ export function Studio({
                       );
                     }}
                   />
-                  <p>支持公开的 HTTP / HTTPS 网页，重复链接会自动合并。</p>
+                  <p>{t('studio.linksHint')}</p>
                 </div>
               )}
               {!all.length && mode === 'browser' && (
@@ -458,21 +473,21 @@ export function Studio({
                   )}
                   <h3>
                     {readingBookmarks
-                      ? '正在读取收藏夹…'
+                      ? t('studio.readingBookmarks')
                       : isExtension
-                        ? '暂无书签'
-                        : '在插件中读取收藏夹'}
+                        ? t('studio.noBookmarks')
+                        : t('studio.useExtension')}
                   </h3>
                   {!readingBookmarks && (
                     <p>
                       {isExtension
-                        ? '添加浏览器书签后重新打开，也可以粘贴文章链接。'
-                        : '安装 Tabbit 文集扩展后，点击插件图标即可直接选择收藏夹。'}
+                        ? t('studio.addBookmarksHint')
+                        : t('studio.installHint', { name: t('brand.name') })}
                     </p>
                   )}
                   {!isExtension && (
                     <a className="button secondary" href="/api/extension">
-                      下载插件
+                      {t('studio.download')}
                     </a>
                   )}
                 </div>
@@ -483,13 +498,13 @@ export function Studio({
                     <label className="search-field">
                       <Search size={15} />
                       <input
-                        aria-label="搜索书签"
-                        placeholder="搜索书签、网址…"
+                        aria-label={t('common.searchBookmarks')}
+                        placeholder={t('studio.searchPlaceholder')}
                         value={search}
                         onChange={(event) => setSearch(event.target.value)}
                       />
                     </label>
-                    <span>{all.length} 个书签</span>
+                    <span>{t('common.bookmarks', { count: all.length })}</span>
                   </div>
                   <div className="bookmark-browser">
                     <aside className="folder-sidebar">
@@ -498,7 +513,8 @@ export function Studio({
                         onClick={() => setActiveFolder('all')}
                       >
                         <BookOpen size={15} />
-                        全部书签<span>{all.length}</span>
+                        {t('studio.allBookmarks')}
+                        <span>{all.length}</span>
                       </button>
                       {nodes
                         .filter((node) => !node.url)
@@ -519,8 +535,10 @@ export function Studio({
                     </aside>
                     <div className="bookmark-list">
                       <div className="select-all-row">
-                        <span>{activeNode ? '此文件夹内的文章' : '全部书签'}</span>
-                        <small>{visible.length} 篇</small>
+                        <span>
+                          {activeNode ? t('studio.folderPages') : t('studio.allBookmarks')}
+                        </span>
+                        <small>{t('common.items', { count: visible.length })}</small>
                       </div>
                       {visible.map((item) => (
                         <div
@@ -537,26 +555,28 @@ export function Studio({
                             <strong>{item.title}</strong>
                             <small>{new URL(item.url).hostname}</small>
                           </span>
-                          {pickedIds.has(item.id) && <em className="bookmark-included">已收录</em>}
+                          {pickedIds.has(item.id) && (
+                            <em className="bookmark-included">{t('studio.included')}</em>
+                          )}
                           <a
                             href={item.url}
                             target="_blank"
                             rel="noreferrer"
-                            aria-label={`打开 ${item.title}`}
+                            aria-label={t('common.open', { title: item.title })}
                             onClick={(event) => event.stopPropagation()}
                           >
                             ↗
                           </a>
                         </div>
                       ))}
-                      {!visible.length && <p className="no-search">没有找到匹配的书签。</p>}
+                      {!visible.length && <p className="no-search">{t('studio.noMatch')}</p>}
                     </div>
                   </div>
                   <div className="source-footer">
                     <Check size={14} />
-                    <span>已收录 {picked.length} 篇，重复链接自动合并</span>
+                    <span>{t('studio.selectionCount', { count: picked.length })}</span>
                     <button className="text-button" onClick={() => setSelectedFolders(new Set())}>
-                      清空选择
+                      {t('common.clearSelection')}
                     </button>
                   </div>
                 </>
@@ -565,23 +585,24 @@ export function Studio({
             <aside className="studio-settings">
               <div className="settings-preview">
                 <BookCover
-                  title={collectionTitle || '封面预览'}
+                  title={collectionTitle || t('studio.coverPreview')}
                   palette={palette}
                   variant={Object.keys(palettes).indexOf(palette)}
                   image={coverImage || undefined}
                 />
               </div>
               <label className="collection-name-field">
-                文集名称 <span>选填</span>
+                {t('common.collectionName')}
+                <span>{t('common.optional')}</span>
                 <input
                   value={collectionTitle}
                   maxLength={60}
-                  placeholder="不填则由 AI 代拟"
+                  placeholder={t('studio.namePlaceholder')}
                   onChange={(event) => setCollectionTitle(event.target.value)}
                 />
               </label>
               <fieldset className="palette-field">
-                <legend>封面</legend>
+                <legend>{t('studio.cover')}</legend>
                 <div className="palette-options">
                   {Object.entries(palettes).map(([value, color]) => (
                     <button
@@ -592,8 +613,8 @@ export function Studio({
                         setPalette(value as Palette);
                         setCoverImage('');
                       }}
-                      aria-label={`${color.name}预置封面`}
-                      title={`${color.name}预置封面`}
+                      aria-label={t('studio.preset', { color: t(color.name) })}
+                      title={t('studio.preset', { color: t(color.name) })}
                       aria-pressed={!coverImage && palette === value}
                     >
                       {!coverImage && palette === value && <Check size={15} />}
@@ -601,18 +622,18 @@ export function Studio({
                   ))}
                   <label
                     className={`cover-image-button${coverImage ? ' selected' : ''}`}
-                    title={coverImage ? '已选择图片封面，点击更换' : '选择图片作为封面'}
+                    title={coverImage ? t('studio.photoSelected') : t('studio.photoChoose')}
                   >
                     {coverImage ? (
                       <Check size={13} aria-hidden="true" />
                     ) : (
                       <ImagePlus size={13} aria-hidden="true" />
                     )}
-                    图片
+                    {t('studio.photo')}
                     <input
                       type="file"
                       accept="image/*"
-                      aria-label={coverImage ? '更换封面图片' : '选择封面图片'}
+                      aria-label={coverImage ? t('studio.photoReplace') : t('studio.photoSelect')}
                       onChange={async (event) => {
                         const file = event.target.files?.[0];
                         event.target.value = '';
@@ -620,7 +641,7 @@ export function Studio({
                         try {
                           setCoverImage(await fileToCoverDataUrl(file));
                         } catch (e) {
-                          setError((e as Error).message);
+                          setError(e);
                         }
                       }}
                     />
@@ -628,12 +649,13 @@ export function Studio({
                 </div>
               </fieldset>
               <label className="direction-field">
-                编辑方向 <span>选填</span>
+                {t('studio.direction')}
+                <span>{t('common.optional')}</span>
                 <textarea
                   maxLength={1000}
                   value={direction}
                   onChange={(event) => setDirection(event.target.value)}
-                  placeholder="例如：比较这些文章对产品设计的不同观点。"
+                  placeholder={t('studio.directionPlaceholder')}
                 />
               </label>
             </aside>
@@ -647,15 +669,15 @@ export function Studio({
               )}
               <p>
                 {picked.length > 500
-                  ? '第一版每本最多 500 篇，请缩小选择范围。'
+                  ? t('studio.tooMany')
                   : picked.length
                     ? ''
-                    : '请至少勾选一个文件夹。'}
+                    : t('studio.selectOne')}
               </p>
             </div>
             <div className="studio-footer-actions">
               <button className="button secondary" disabled={busy} onClick={onClose}>
-                取消创建
+                {t('studio.cancelCreate')}
               </button>
               <button
                 className="button primary"
@@ -663,7 +685,8 @@ export function Studio({
                 onClick={() => void start()}
               >
                 {busy ? <LoaderCircle className="spin" size={16} /> : <Sparkles size={16} />}{' '}
-                生成介绍 <ArrowRight size={17} />
+                {t('studio.generate')}
+                <ArrowRight size={17} />
               </button>
             </div>
           </div>
@@ -671,12 +694,12 @@ export function Studio({
       ) : job.status === 'outline_ready' && outline ? (
         <>
           <div className="studio-intro">
-            <p>确认文集名称、文章顺序和介绍后保存。</p>
+            <p>{t('studio.reviewHint')}</p>
           </div>
           <div className="outline-grid">
             <section className="outline-editor">
               <label>
-                文集名称
+                {t('common.collectionName')}
                 <input
                   className="title-edit"
                   maxLength={60}
@@ -685,8 +708,8 @@ export function Studio({
                 />
               </label>
               <div className="outline-list-heading">
-                <span>收录文章</span>
-                <span>{articles.length} 篇</span>
+                <span>{t('studio.includedPages')}</span>
+                <span>{t('common.items', { count: articles.length })}</span>
               </div>
               <div className="article-review-list">
                 {articles.map((article, index) => (
@@ -696,7 +719,7 @@ export function Studio({
                         <small className="article-folder-tag">{folderById.get(article.id)}</small>
                       )}
                       <input
-                        aria-label={`第 ${index + 1} 篇文章标题`}
+                        aria-label={t('studio.pageTitle', { index: index + 1 })}
                         maxLength={500}
                         value={article.title}
                         onChange={(event) =>
@@ -710,9 +733,9 @@ export function Studio({
                         }
                       />
                       <label>
-                        AI 介绍
+                        {t('studio.aiIntroduction')}
                         <textarea
-                          aria-label={`第 ${index + 1} 篇文章介绍`}
+                          aria-label={t('studio.pageIntroduction', { index: index + 1 })}
                           maxLength={2000}
                           value={article.summary}
                           onChange={(event) =>
@@ -731,7 +754,7 @@ export function Studio({
                       <button
                         className="icon-button"
                         disabled={index === 0}
-                        aria-label={`上移第 ${index + 1} 篇文章`}
+                        aria-label={t('studio.moveUp', { index: index + 1 })}
                         onClick={() => {
                           const next = [...articles];
                           [next[index - 1], next[index]] = [next[index]!, next[index - 1]!];
@@ -743,7 +766,7 @@ export function Studio({
                       <button
                         className="icon-button"
                         disabled={index === articles.length - 1}
-                        aria-label={`下移第 ${index + 1} 篇文章`}
+                        aria-label={t('studio.moveDown', { index: index + 1 })}
                         onClick={() => {
                           const next = [...articles];
                           [next[index + 1], next[index]] = [next[index]!, next[index + 1]!];
@@ -760,22 +783,24 @@ export function Studio({
             <aside className="outline-preview">
               <BookCover title={outline.title} palette={palette} image={coverImage || undefined} />
               <div className="source-report">
-                <h3>素材阅读情况</h3>
+                <h3>{t('studio.readingStatus')}</h3>
                 {job.sources.map((source) => (
                   <div key={source.id}>
-                    <span className={`source-dot ${source.status}`} />
+                    <span
+                      className={`source-dot ${source.pageAnalysis?.basis === 'blocked' ? 'unavailable' : source.status}`}
+                    />
                     <span>{source.title}</span>
                     <small>
-                      {
-                        (
-                          {
-                            full: '已读取',
-                            excerpt: '正文节选',
-                            metadata: '仅简介',
-                            unavailable: '未读取',
-                          } as const
-                        )[source.status]
-                      }
+                      {source.pageAnalysis?.basis === 'blocked'
+                        ? t('studio.blocked')
+                        : (
+                            {
+                              full: t('studio.full'),
+                              excerpt: t('studio.excerpt'),
+                              metadata: t('studio.metadata'),
+                              unavailable: t('studio.unavailable'),
+                            } as const
+                          )[source.status]}
                     </small>
                   </div>
                 ))}
@@ -792,7 +817,7 @@ export function Studio({
             </div>
             <div className="studio-footer-actions">
               <button className="button secondary" disabled={busy} onClick={() => void cancel()}>
-                取消草稿
+                {t('studio.cancelDraft')}
               </button>
               <button
                 className="button primary"
@@ -805,28 +830,40 @@ export function Studio({
                 onClick={() => void write()}
               >
                 {busy ? <LoaderCircle size={16} className="spin" /> : <BookOpen size={16} />}
-                保存文集 <ArrowRight size={17} />
+                {t('studio.save')}
+                <ArrowRight size={17} />
               </button>
             </div>
           </div>
         </>
       ) : ['failed', 'cancelled'].includes(job.status) ? (
         <section className="job-result">
-          <h1>{job.status === 'cancelled' ? '已取消生成' : '生成失败'}</h1>
-          <p role="alert">{job.error || job.message}</p>
+          <h1>{job.status === 'cancelled' ? t('studio.cancelled') : t('studio.failed')}</h1>
+          <p role="alert">
+            {job.errorDetails
+              ? t(job.errorDetails.key, job.errorDetails.params)
+              : job.messageDetails
+                ? t(job.messageDetails.key, job.messageDetails.params)
+                : job.error || job.message}
+          </p>
           <button className="button primary" onClick={reset}>
-            重新选择素材 <ArrowRight size={16} />
+            {t('studio.reselect')}
+            <ArrowRight size={16} />
           </button>
         </section>
       ) : (
         <section className="generation-view" aria-live="polite">
           <div className="generation-copy">
-            <h1>{job.status === 'writing' ? '正在保存文集' : '正在生成文章介绍'}</h1>
-            <p>{job.message}</p>
+            <h1>{job.status === 'writing' ? t('studio.saving') : t('studio.generating')}</h1>
+            <p>
+              {job.messageDetails
+                ? t(job.messageDetails.key, job.messageDetails.params)
+                : job.message}
+            </p>
             <div
               className="progress-track"
               role="progressbar"
-              aria-label="整理进度"
+              aria-label={t('studio.progress')}
               aria-valuemin={0}
               aria-valuemax={100}
               aria-valuenow={job.progress}
@@ -834,13 +871,15 @@ export function Studio({
               <div style={{ width: `${job.progress}%` }} />
             </div>
             <div className="progress-caption">
-              <span>{job.status === 'writing' ? '保存文章与介绍' : '读取文章与生成介绍'}</span>
+              <span>
+                {job.status === 'writing' ? t('studio.savePages') : t('studio.readAndIntroduce')}
+              </span>
               <span>{job.progress}%</span>
             </div>
             <div className="generation-stages">
               {(job.status === 'writing'
-                ? ['确认文章', '保留原文链接', '保存文集']
-                : ['读取文章', '生成介绍', '整理文集名称']
+                ? [t('studio.review'), t('studio.keepLinks'), t('studio.save')]
+                : [t('studio.readPages'), t('studio.analyze'), t('studio.name')]
               ).map((label, i) => {
                 const current =
                   job.status === 'writing'
@@ -861,23 +900,21 @@ export function Studio({
               })}
             </div>
             <p className="generation-hint">
-              {isExtension
-                ? '可以离开此页，保持浏览器打开，任务会继续。'
-                : '可以离开此页；保持本地服务运行，任务会继续。'}
+              {isExtension ? t('studio.keepBrowser') : t('studio.keepServer')}
             </p>
             {pollError && (
               <p className="error-message" role="alert">
-                {pollError} 正在尝试重新连接…
+                {pollError} {t('common.reconnecting')}
               </p>
             )}
             <div className="generation-actions">
               <button className="text-button" onClick={onClose}>
                 <ArrowLeft size={14} />
-                回到文集
+                {t('common.back')}
               </button>
               <button className="text-button" disabled={busy} onClick={() => void cancel()}>
                 <X size={14} />
-                停止整理
+                {t('studio.stop')}
               </button>
             </div>
           </div>

@@ -1,3 +1,4 @@
+import { AppError } from './i18n';
 import { z } from 'zod';
 import type { Book } from './types';
 import { medalTiers } from './featured-medals';
@@ -33,14 +34,14 @@ export function applyBookFlags(book: Book, input: BookFlags): Book {
   const updated = { ...book };
   if (flags.pinned !== undefined) updated.pinned = flags.pinned;
   if (flags.featuredMedal !== undefined) {
-    if (!book.featured || flags.editorial) throw new Error('当前文集无法佩戴精选勋章。');
+    if (!book.featured || flags.editorial) throw new AppError('error.medalUnavailable');
     updated.featuredMedal = flags.featuredMedal;
   }
   const action = flags.editorial;
   if (!action) return updated;
   if (action.action === 'submit') {
     if (book.featured || book.editorial?.status === 'pending')
-      throw new Error('当前文集已精选或正在审核，请先取消。');
+      throw new AppError('error.alreadyFeatured');
     updated.featured = false;
     updated.editorial = {
       status: 'pending',
@@ -49,7 +50,7 @@ export function applyBookFlags(book: Book, input: BookFlags): Book {
       submittedAt: new Date().toISOString(),
     };
   } else if (action.action === 'approve') {
-    if (book.editorial?.status !== 'pending') throw new Error('当前文集没有待审核的申请。');
+    if (book.editorial?.status !== 'pending') throw new AppError('error.noApplication');
     updated.featured = true;
     updated.editorial = { ...book.editorial, status: 'approved' };
   } else {

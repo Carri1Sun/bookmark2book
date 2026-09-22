@@ -26,7 +26,7 @@ test('article folders group under the common root and keep first-seen order', ()
   );
 });
 
-test('collections render one notebook and introduction per source without legacy long-form content', () => {
+test('collections render one cover, title and introduction per source without legacy long-form content', () => {
   const book: Book = {
     id: 'render-book',
     subtitle: '',
@@ -72,7 +72,8 @@ test('collections render one notebook and introduction per source without legacy
   try {
     const doc = dom.window.document;
     assert.equal(doc.querySelectorAll('.article-card').length, 2);
-    assert.equal(doc.querySelectorAll('.notebook-cover h2').length, 2);
+    assert.equal(doc.querySelectorAll('.page-cover').length, 2);
+    assert.equal(doc.querySelectorAll('.article-title').length, 2);
     assert.equal(doc.querySelectorAll('.article-introduction').length, 2);
     assert.equal(doc.querySelector('.collection-title')?.textContent, book.title);
     assert.equal(doc.querySelector('.article-introduction')?.textContent, book.sources[0]!.summary);

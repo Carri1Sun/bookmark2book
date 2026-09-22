@@ -56,7 +56,7 @@ test('native bookmark reading preserves folders without mutating bookmarks; mess
   });
   assert.deepEqual(await readBrowserBookmarks(), children);
   assert.equal(reads, 1);
-  const message = { channel: 'bookmark-press', target: 'runner', method: 'jobs.get' };
+  const message = { channel: 'tabbit-collections', target: 'runner', method: 'jobs.get' };
   assert.equal(trustedMessage(message, { id: 'extension-id' }, 'runner'), true);
   assert.equal(
     trustedMessage(message, { id: 'extension-id', url: 'https://example.com' }, 'runner'),
@@ -125,7 +125,20 @@ test('extension jobs deduplicate chosen bookmarks and save an editable collectio
         {
           message: {
             content: JSON.stringify({
-              sources: [{ id: 's1', summary: '介绍所选文章的内容与阅读价值。' }],
+              sources:
+                requests.length === 1
+                  ? [
+                      {
+                        id: 's1',
+                        analysis: {
+                          type: 'article',
+                          subject: '所选文章',
+                          confidence: 'high',
+                          basis: 'content',
+                        },
+                      },
+                    ]
+                  : [{ id: 's1', summary: '介绍所选文章的内容与阅读价值。' }],
             }),
           },
         },
@@ -142,13 +155,16 @@ test('extension jobs deduplicate chosen bookmarks and save an editable collectio
     palette: 'forest',
     direction: '',
     collectionTitle: '设计收藏',
+    locale: 'en',
   });
   const ready = await waitReady(jobs, created.id);
   assert.equal(ready.status, 'outline_ready');
   assert.equal(ready.bookmarks.length, 1);
   assert.equal(ready.outline?.title, '设计收藏');
   assert.equal(ready.sources[0]?.content, undefined);
-  assert.equal(requests.length, 1);
+  assert.equal(requests.length, 2);
+  assert.equal(ready.locale, 'en');
+  assert(requests.every((request) => request.includes('Output language: English (en)')));
   assert.equal(requests[0]?.includes(settings.apiKey), false);
   const input = {
     outline: ready.outline,
@@ -161,9 +177,11 @@ test('extension jobs deduplicate chosen bookmarks and save an editable collectio
   assert.equal(saves.filter((result) => result.status === 'fulfilled').length, 1);
   const books = await store.books();
   assert.equal(books.length, 1);
+  assert.equal(books[0]?.locale, 'en');
   assert.equal(books[0]?.sources[0]?.title, '编辑后的标题');
   assert.equal(books[0]?.sources[0]?.url, bookmark.url);
   assert.equal(books[0]?.sources[0]?.content, undefined);
+  assert.equal(books[0]?.sources[0]?.pageAnalysis?.type, 'article');
   assert.equal((await jobs.get(ready.id)).bookId, books[0]?.id);
   assert.equal(JSON.stringify(await store.jobs()).includes(settings.apiKey), false);
   const reopened = createCollectionStore(databaseName);

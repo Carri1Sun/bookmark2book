@@ -142,24 +142,7 @@ a {
   background: currentColor;
   opacity: 0.25;
 }
-.article-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 70px 64px;
-  align-items: start;
-}
-.article-card {
-  min-width: 0;
-  scroll-margin-top: 125px;
-}
-.article-cover-link {
-  display: block;
-  width: 88%;
-  margin: 0 auto 34px;
-  color: inherit;
-  text-decoration: none;
-  perspective: 1000px;
-}
+
 .notebook-cover {
   width: 100%;
   aspect-ratio: 0.84;
@@ -175,9 +158,7 @@ a {
 .notebook-tone-3 {
   transform: rotate(1deg);
 }
-a.article-cover-link:hover .notebook-cover {
-  transform: translateY(-7px) rotate(0deg);
-}
+
 .notebook-front {
   position: absolute;
   inset: 0;
@@ -235,30 +216,7 @@ a.article-cover-link:hover .notebook-cover {
   background: repeating-linear-gradient(0deg, var(--page-edge) 0 1px, var(--page-base) 1px 3px);
   box-shadow: 2px 4px 3px color-mix(in srgb, var(--shadow) 4.31%, transparent);
 }
-.article-introduction {
-  font: 16px/1.95 var(--sans);
-  color: var(--ink);
-  margin: 0 0 18px;
-  overflow-wrap: anywhere;
-}
-.article-source-note {
-  font: 12px/1.8 var(--sans);
-  color: var(--muted);
-  margin: -4px 0 18px;
-}
-.article-original {
-  font-size: 14px;
-  display: inline-flex;
-  gap: 12px;
-  align-items: center;
-  text-decoration: none;
-  color: var(--accent-strong);
-  padding-bottom: 5px;
-  border-bottom: 1px solid transparent;
-}
-.article-original:hover {
-  border-color: var(--accent-strong);
-}
+
 .collection-empty {
   color: var(--muted);
   font-size: 16px;
@@ -383,21 +341,8 @@ a.article-cover-link:hover .notebook-cover {
   .collection-content {
     width: calc(100% - 64px);
   }
-  .article-grid {
-    gap: 58px 40px;
-  }
-  .article-cover-link {
-    width: 94%;
-  }
-  .article-introduction {
-    font-size: 15px;
-  }
 }
 @media (max-width: 850px) {
-  .article-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 58px 40px;
-  }
   .collection-title {
     font-size: 24px;
     max-width: 70%;
@@ -433,21 +378,6 @@ a.article-cover-link:hover .notebook-cover {
   }
   .collection-count {
     font-size: 12px;
-  }
-  .article-grid {
-    grid-template-columns: 1fr;
-    gap: 52px;
-  }
-  .article-cover-link {
-    width: min(84%, 280px);
-    margin-bottom: 28px;
-  }
-  .article-introduction {
-    font-size: 16px;
-    line-height: 1.95;
-  }
-  .article-original {
-    font-size: 14px;
   }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -499,27 +429,12 @@ a.article-cover-link:hover .notebook-cover {
   .collection-title {
     max-width: 100%;
   }
-  .article-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 36px;
-  }
-  .article-card {
-    break-inside: avoid;
-  }
+
   .notebook-cover {
     print-color-adjust: exact;
     -webkit-print-color-adjust: exact;
   }
-  .article-cover-link {
-    width: 70%;
-  }
-  .article-introduction {
-    font-size: 11pt;
-  }
-  .article-original {
-    display: block;
-    font-size: 10pt;
-  }
+
   .article-original::after {
     content: attr(href);
     display: block;

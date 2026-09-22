@@ -29,8 +29,8 @@ test('exported medals preserve the selected tier and have no nonfunctional contr
 
 test('retired saved medals resolve to the available aurora tier', () => {
   assert.equal(featuredMedals.length, 7);
-  assert.equal(featuredMedals.at(-2)?.requirement, '累计 50,000 次阅读');
-  assert.equal(featuredMedals.at(-1)?.requirement, '累计 100,000 次阅读');
+  assert.equal(featuredMedals.at(-2)?.views, 50000);
+  assert.equal(featuredMedals.at(-1)?.views, 100000);
   for (const saved of ['orbit', 'corona', 'aurora']) {
     assert.equal(normalizeMedalTier(saved), 'aurora');
     const html = renderToStaticMarkup(<FeaturedBadge tier={saved as never} />);

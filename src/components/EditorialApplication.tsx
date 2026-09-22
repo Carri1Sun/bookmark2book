@@ -1,3 +1,4 @@
+import { useI18n, useMessageState } from '../lib/i18n';
 import { useRef, useState } from 'react';
 import { ArrowUpRight, LoaderCircle, Sparkles } from 'lucide-react';
 import type { Book } from '../../shared/types';
@@ -15,13 +16,14 @@ export function EditorialApplication({
   onBack: () => void;
   onSubmit: (reason: string, introduction: string) => Promise<void>;
 }) {
+  const { t, locale } = useI18n();
   const [reason, setReason] = useState('');
   const [introduction, setIntroduction] = useState('');
   const [generating, setGenerating] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useMessageState();
   const busy = useRef(false);
-  const articles = collectionArticles(book);
+  const articles = collectionArticles(book, locale);
   async function generate() {
     if (busy.current) return;
     busy.current = true;
@@ -30,7 +32,7 @@ export function EditorialApplication({
     try {
       setIntroduction((await api.generateIntroduction(book.id)).introduction);
     } catch (e) {
-      setError((e as Error).message);
+      setError(e);
     } finally {
       busy.current = false;
       setGenerating(false);
@@ -45,7 +47,7 @@ export function EditorialApplication({
     try {
       await onSubmit(reason.trim(), introduction.trim());
     } catch (e) {
-      setError((e as Error).message || '提交失败，请重试。');
+      setError(e);
     } finally {
       busy.current = false;
       setSubmitting(false);
@@ -53,12 +55,10 @@ export function EditorialApplication({
   }
   return (
     <main className="editorial-page page-width">
-      <p className="editorial-subtitle">
-        精选审核通过后，你的文章将在 Tiscovery 栏目中展示，同时获得特殊标识
-      </p>
+      <p className="editorial-subtitle">{t('editorial.subtitle')}</p>
       <form className="editorial-layout" onSubmit={submit}>
         <div className="editorial-left">
-          <section className="editorial-summary" aria-label="文集信息">
+          <section className="editorial-summary" aria-label={t('editorial.collectionInfo')}>
             <div className="editorial-cover">
               <BookCover title={book.title} palette={book.palette} image={book.coverImage} />
             </div>
@@ -66,27 +66,28 @@ export function EditorialApplication({
               <h2>{book.title.replace(/\n/g, '')}</h2>
               <dl>
                 <div>
-                  <dt>作者</dt>
-                  <dd>Kaiyi</dd>
+                  <dt>{t('editorial.author')}</dt>
+                  <dd>{t('editorial.authorName')}</dd>
                 </div>
                 <div>
-                  <dt>创建时间</dt>
-                  <dd>{new Date(book.createdAt).toLocaleDateString('zh-CN')}</dd>
+                  <dt>{t('editorial.created')}</dt>
+                  <dd>{new Date(book.createdAt).toLocaleDateString(locale)}</dd>
                 </div>
                 <div>
-                  <dt>文章数量</dt>
-                  <dd>{articles.length} 篇</dd>
+                  <dt>{t('editorial.pageCount')}</dt>
+                  <dd>{t('common.items', { count: articles.length })}</dd>
                 </div>
               </dl>
             </div>
           </section>
-          <section className="editorial-fields" aria-label="申请信息">
+          <section className="editorial-fields" aria-label={t('editorial.applicationInfo')}>
             <label htmlFor="editorial-reason">
-              申请理由 <span>选填</span>
+              {t('editorial.reason')}
+              <span>{t('common.optional')}</span>
             </label>
             <textarea
               id="editorial-reason"
-              placeholder="为什么推荐这本文集？可以聊聊选文思路或推荐理由。"
+              placeholder={t('editorial.reasonPlaceholder')}
               maxLength={2000}
               value={reason}
               onChange={(e) => setReason(e.target.value)}
@@ -94,7 +95,8 @@ export function EditorialApplication({
             />
             <div className="editorial-label-row">
               <label htmlFor="editorial-introduction">
-                简介 <span>选填</span>
+                {t('editorial.introduction')}
+                <span>{t('common.optional')}</span>
               </label>
               <button
                 className="text-button editorial-ai"
@@ -103,12 +105,12 @@ export function EditorialApplication({
                 disabled={generating || submitting}
               >
                 {generating ? <LoaderCircle size={14} className="spin" /> : <Sparkles size={14} />}
-                {generating ? '正在生成…' : '使用 AI 自动生成'}
+                {generating ? t('editorial.generating') : t('editorial.generate')}
               </button>
             </div>
             <textarea
               id="editorial-introduction"
-              placeholder="用一段话介绍文集的主题、内容与阅读价值。"
+              placeholder={t('editorial.introductionPlaceholder')}
               maxLength={1000}
               value={introduction}
               onChange={(e) => setIntroduction(e.target.value)}
@@ -116,10 +118,10 @@ export function EditorialApplication({
             />
           </section>
         </div>
-        <section className="editorial-articles" aria-label="文章列表">
+        <section className="editorial-articles" aria-label={t('editorial.pages')}>
           <div className="editorial-list-heading">
-            <h2>文章列表</h2>
-            <span>{articles.length} 篇文章</span>
+            <h2>{t('editorial.pages')}</h2>
+            <span>{t('common.pages', { count: articles.length })}</span>
           </div>
           <ol>
             {articles.map((article, index) => (
@@ -141,7 +143,7 @@ export function EditorialApplication({
               </li>
             ))}
           </ol>
-          {!articles.length && <p className="editorial-empty">此文集暂无文章。</p>}
+          {!articles.length && <p className="editorial-empty">{t('common.emptyPages')}</p>}
         </section>
         <footer className="editorial-footer">
           <div aria-live="polite">
@@ -158,11 +160,11 @@ export function EditorialApplication({
               onClick={onBack}
               disabled={submitting}
             >
-              取消提交
+              {t('editorial.cancel')}
             </button>
             <button className="button primary" type="submit" disabled={submitting || generating}>
               {submitting && <LoaderCircle size={16} className="spin" />}
-              {submitting ? '正在提交…' : '提交申请'}
+              {submitting ? t('editorial.submitting') : t('editorial.submit')}
             </button>
           </div>
         </footer>

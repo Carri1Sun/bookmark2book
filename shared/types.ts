@@ -1,3 +1,4 @@
+import { AppError, locales, defaultLocale, type Locale, type MessageDescriptor } from './i18n';
 import { z } from 'zod';
 
 export const paletteSchema = z.enum(['forest', 'vermilion', 'sand', 'ink']);
@@ -15,7 +16,7 @@ export const bookmarkSchema = z.object({
     .string()
     .url()
     .max(4000)
-    .refine((url) => /^https?:\/\//i.test(url), '仅支持 HTTP/HTTPS 网页'),
+    .refine((url) => /^https?:\/\//i.test(url), 'error.httpOnly'),
   folder: z.string().max(1000).optional(),
 });
 export type Bookmark = z.infer<typeof bookmarkSchema>;
@@ -25,7 +26,12 @@ export interface Source extends Bookmark {
   summary?: string;
   ideas?: string[];
   error?: string;
+  errorDetails?: MessageDescriptor;
   wordCount?: number;
+  pageMetadata?: import('./page-metadata').PageMetadata;
+  pageAnalysis?: import('./page-analysis').PageAnalysis;
+  imageCandidates?: import('./page-images').ImageCandidate[];
+  images?: import('./page-images').SourceImages;
 }
 export const outlineSchema = z.object({
   title: z.string().min(1).max(60),
@@ -67,6 +73,7 @@ export type Chapter = z.infer<typeof chapterContentSchema> & {
   sourceIds: string[];
 };
 export interface Book {
+  locale?: Locale;
   id: string;
   title: string;
   subtitle: string;
@@ -99,10 +106,12 @@ export type JobStatus =
   | 'failed'
   | 'cancelled';
 export interface Job {
+  locale?: Locale;
   id: string;
   status: JobStatus;
   progress: number;
   message: string;
+  messageDetails?: MessageDescriptor;
   createdAt: string;
   bookmarks: Bookmark[];
   sources: Source[];
@@ -114,14 +123,16 @@ export interface Job {
   outline?: Outline;
   bookId?: string;
   error?: string;
+  errorDetails?: MessageDescriptor;
 }
 export const createJobSchema = z.object({
+  locale: z.enum(locales).default(defaultLocale),
   bookmarks: z.array(bookmarkSchema).min(1).max(500),
   palette: paletteSchema.default('forest'),
   coverImage: z
     .string()
-    .max(1_500_000, '封面图片过大，请换一张。')
-    .refine((value) => value.startsWith('data:image/'), '封面图片格式不受支持。')
+    .max(1_500_000, 'error.coverSize')
+    .refine((value) => value.startsWith('data:image/'), 'error.coverFormat')
     .optional(),
   direction: z.string().max(1000).default(''),
   collectionTitle: z.string().trim().max(60).optional(),
@@ -140,11 +151,10 @@ export const writeJobSchema = z.object({
 export function validateReferences(outline: Outline, sources: Source[]) {
   const known = new Set(sources.map((source) => source.id));
   if (outline.chapters.some((chapter) => chapter.sourceIds.some((id) => !known.has(id)))) {
-    throw new Error('模型返回了不存在的来源，请重试生成目录。');
+    throw new AppError('error.references');
   }
   const used = new Set(outline.chapters.flatMap((chapter) => chapter.sourceIds));
-  if (sources.some((source) => !used.has(source.id)))
-    throw new Error('目录遗漏了部分素材，请重试生成目录。');
+  if (sources.some((source) => !used.has(source.id))) throw new AppError('error.missingReferences');
 }
 export function validateChapterReferences(
   chapter: z.infer<typeof chapterContentSchema>,
@@ -153,11 +163,12 @@ export function validateChapterReferences(
   const ids = new Set(allowed);
   for (const section of chapter.sections)
     for (const paragraph of section.paragraphs) {
-      if (paragraph.sourceIds.some((id) => !ids.has(id))) throw new Error('章节包含无效来源。');
-      if (!paragraph.sourceIds.length) throw new Error('章节段落缺少来源。');
+      if (paragraph.sourceIds.some((id) => !ids.has(id)))
+        throw new AppError('error.chapterReferences');
+      if (!paragraph.sourceIds.length) throw new AppError('error.paragraphReferences');
     }
 }
 export function publicSource(source: Source): Source {
-  const { content: _content, ...rest } = source;
+  const { content: _content, pageMetadata: _pageMetadata, ...rest } = source;
   return rest;
 }

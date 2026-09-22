@@ -1,3 +1,5 @@
+import { AppError, translate, type Locale } from '../../shared/i18n';
+import { getUiLocale } from './locale';
 import type { Bookmark, BookmarkNode } from '../../shared/types';
 
 export function safeHttpUrl(value: string): string | null {
@@ -35,7 +37,7 @@ export function deduplicateBookmarks(items: Bookmark[]): Bookmark[] {
     return true;
   });
 }
-export function parseLinks(text: string): Bookmark[] {
+export function parseLinks(text: string, locale: Locale = getUiLocale()): Bookmark[] {
   const urls = text.match(/https?:\/\/[^\s<>"\u3000]+/gi) || [];
   return deduplicateBookmarks(
     urls.flatMap((value, i) => {
@@ -46,7 +48,7 @@ export function parseLinks(text: string): Bookmark[] {
               id: `link-${i}`,
               title: new URL(url).hostname + new URL(url).pathname.slice(0, 100),
               url,
-              folder: '粘贴的链接',
+              folder: translate(locale, 'studio.pasted'),
             },
           ]
         : [];
@@ -84,7 +86,7 @@ export function parseBookmarkHtml(
         return [
           {
             id: `folder-${nextId++}`,
-            title: heading.textContent?.trim() || '未命名文件夹',
+            title: heading.textContent?.trim() || translate(getUiLocale(), 'bookmarks.untitled'),
             children: nested ? walk(nested) : [],
           },
         ];
@@ -93,14 +95,14 @@ export function parseBookmarkHtml(
     });
   }
   const root = doc.querySelector('dl');
-  if (!root) throw new Error('没有找到书签。请选择浏览器导出的 HTML 书签文件。');
+  if (!root) throw new AppError('error.bookmarkFile');
   const result = walk(root);
-  if (!flattenBookmarks(result).length) throw new Error('文件中没有可用的网页书签。');
+  if (!flattenBookmarks(result).length) throw new AppError('error.bookmarkFileEmpty');
   return result;
 }
 export async function readBrowserBookmarks(): Promise<BookmarkNode[]> {
   if (!globalThis.chrome?.bookmarks?.getTree)
-    throw new Error('请在 Tabbit 文集浏览器扩展中读取收藏夹，网页无法直接读取浏览器书签。');
+    throw new AppError('error.bookmarkExtension', { name: translate(getUiLocale(), 'brand.name') });
   const tree = await chrome.bookmarks.getTree();
   return tree.length === 1 && !tree[0]!.title ? tree[0]!.children || [] : tree;
 }

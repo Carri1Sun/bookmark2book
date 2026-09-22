@@ -1,3 +1,5 @@
+import { productName, extensionArchiveName } from '../shared/branding';
+import { translate } from '../shared/i18n';
 import { build } from 'esbuild';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -5,6 +7,27 @@ import { zipSync } from 'fflate';
 import { buildIcons } from './icons';
 const out = 'dist/extension';
 await buildIcons(out);
+for (const [folder, locale] of [
+  ['en', 'en'],
+  ['zh_CN', 'zh-CN'],
+  ['zh_TW', 'zh-CN'],
+] as const) {
+  await fs.mkdir(`${out}/_locales/${folder}`, { recursive: true });
+  await fs.writeFile(
+    `${out}/_locales/${folder}/messages.json`,
+    JSON.stringify(
+      {
+        productName: { message: translate(locale, 'brand.name') },
+        productDescription: { message: translate(locale, 'brand.description') },
+        actionTitle: {
+          message: translate(locale, 'brand.open', { name: translate(locale, 'brand.name') }),
+        },
+      },
+      null,
+      2,
+    ),
+  );
+}
 await build({
   entryPoints: { background: 'src/background.ts', offscreen: 'src/extension/offscreen.ts' },
   bundle: true,
@@ -15,24 +38,25 @@ await build({
 });
 await fs.writeFile(
   `${out}/offscreen.html`,
-  '<!doctype html><html><head><meta charset="utf-8"><title>Tabbit 文集</title></head><body><script type="module" src="./offscreen.js"></script></body></html>',
+  `<!doctype html><html><head><meta charset="utf-8"><title>${productName}</title></head><body><script type="module" src="./offscreen.js"></script></body></html>`,
 );
 await fs.writeFile(
   `${out}/manifest.json`,
   JSON.stringify(
     {
       manifest_version: 3,
-      name: 'Tabbit 文集',
-      version: '0.3.47',
+      name: '__MSG_productName__',
+      default_locale: 'en',
+      version: '0.3.51',
       minimum_chrome_version: '120',
-      description: '将收藏夹中的文章整理为带文章封面与 AI 介绍的 HTML 文集。',
-      permissions: ['bookmarks', 'storage', 'offscreen'],
+      description: '__MSG_productDescription__',
+      permissions: ['bookmarks', 'storage', 'offscreen', 'debugger'],
       host_permissions: ['https://api.deepseek.com/*'],
       optional_host_permissions: ['https://*/*', 'http://*/*'],
       options_ui: { page: 'index.html?settings=1', open_in_tab: true },
       icons: { 16: 'icon-16.png', 32: 'icon-32.png', 48: 'icon-48.png', 128: 'icon-128.png' },
       action: {
-        default_title: '打开 Tabbit 文集',
+        default_title: '__MSG_actionTitle__',
         default_icon: { 16: 'icon-16.png', 32: 'icon-32.png' },
       },
       background: { service_worker: 'background.js', type: 'module' },
@@ -55,5 +79,5 @@ async function collect(directory: string) {
   }
 }
 await collect(out);
-await fs.writeFile('dist/bookmark-press-extension.zip', zipSync(files, { level: 9 }));
-console.log('Chrome extension ready: dist/extension · dist/bookmark-press-extension.zip');
+await fs.writeFile(`dist/${extensionArchiveName}`, zipSync(files, { level: 9 }));
+console.log(`${productName} extension ready: dist/extension · dist/${extensionArchiveName}`);

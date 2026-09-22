@@ -1,3 +1,5 @@
+import { useI18n, useMessageState } from '../lib/i18n';
+import { AppError, message } from '../../shared/i18n';
 import { useEffect, useRef, useState } from 'react';
 import { Check, LoaderCircle, X } from 'lucide-react';
 import {
@@ -8,6 +10,7 @@ import {
 } from '../../shared/settings';
 import { api } from '../lib/api';
 import { extensionContext } from '../extension/protocol';
+import { useCoverMode } from '../lib/display-preferences';
 
 export function SettingsDialog({
   open,
@@ -18,12 +21,14 @@ export function SettingsDialog({
   onClose: () => void;
   onSaved: (settings: SettingsStatus) => void;
 }) {
+  const { t, locale, setLocale } = useI18n();
+  const [coverMode, setCoverMode] = useCoverMode();
   const dialog = useRef<HTMLDialogElement>(null);
   const [settings, setSettings] = useState<SettingsStatus>({ ...defaultSettings, hasKey: false });
   const [apiKey, setApiKey] = useState('');
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState('');
-  const [error, setError] = useState('');
+  const [error, setError] = useMessageState();
   const [tested, setTested] = useState(false);
   useEffect(() => {
     if (!open) {
@@ -43,7 +48,7 @@ export function SettingsDialog({
         if (!cancelled) setSettings(value);
       })
       .catch((e) => {
-        if (!cancelled) setError(e.message);
+        if (!cancelled) setError(e);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -62,14 +67,14 @@ export function SettingsDialog({
       clearKey: action === 'clear',
     });
     if (!result.success) {
-      setError('请填写有效的 HTTPS API 地址与模型名称。');
+      setError(message('error.settingsInput'));
       return;
     }
     const input: SettingsInput = result.data;
     setBusy(action);
     try {
       if (action !== 'clear' && !(await api.allowSites([input.baseUrl])))
-        throw new Error('未获得 API 网站访问权限，设置尚未保存。');
+        throw new AppError('error.apiPermission');
       if (action === 'test') {
         await api.testSettings(input);
         setTested(true);
@@ -81,7 +86,7 @@ export function SettingsDialog({
         if (action === 'save') onClose();
       }
     } catch (e) {
-      setError((e as Error).message);
+      setError(e);
     } finally {
       setBusy('');
     }
@@ -103,11 +108,11 @@ export function SettingsDialog({
         }}
       >
         <div className="api-settings-heading">
-          <h2 id="api-settings-title">设置</h2>
+          <h2 id="api-settings-title">{t('common.settings')}</h2>
           <button
             type="button"
             className="icon-button"
-            aria-label="关闭设置"
+            aria-label={t('settings.close')}
             disabled={Boolean(busy)}
             onClick={onClose}
           >
@@ -115,14 +120,39 @@ export function SettingsDialog({
           </button>
         </div>
         <label className="api-setting-field">
-          API Key
+          {t('settings.language')}
+          <select
+            value={locale}
+            onChange={(event) => setLocale(event.target.value as 'zh-CN' | 'en')}
+          >
+            <option value="zh-CN">{t('settings.zh')}</option>
+            <option value="en">{t('settings.en')}</option>
+          </select>
+        </label>
+        <div className="api-setting-field">
+          <span id="page-cover-setting">{t('settings.pageCovers')}</span>
+          <div className="cover-mode-toggle" role="group" aria-labelledby="page-cover-setting">
+            {(['preview', 'screenshot'] as const).map((mode) => (
+              <button
+                key={mode}
+                type="button"
+                aria-pressed={coverMode === mode}
+                onClick={() => setCoverMode(mode)}
+              >
+                {t(mode === 'preview' ? 'settings.previewImage' : 'settings.screenshot')}
+              </button>
+            ))}
+          </div>
+        </div>
+        <label className="api-setting-field">
+          {t('settings.apiKey')}
           <input
             type="password"
             value={apiKey}
             autoComplete="new-password"
             spellCheck={false}
             disabled={loading || Boolean(busy)}
-            placeholder={settings.hasKey ? '已保存，留空保留现有密钥' : '填写你的 API Key'}
+            placeholder={settings.hasKey ? t('settings.keySaved') : t('settings.keyPlaceholder')}
             onChange={(event) => {
               setApiKey(event.target.value);
               setTested(false);
@@ -130,9 +160,7 @@ export function SettingsDialog({
           />
         </label>
         <p className="api-key-note">
-          {extensionContext
-            ? '密钥仅保存在当前浏览器，用于直接调用你配置的 API。'
-            : '密钥保存在本机服务的配置中。'}
+          {extensionContext ? t('settings.keyBrowser') : t('settings.keyServer')}
         </p>
         <details
           className="api-advanced"
@@ -140,9 +168,9 @@ export function SettingsDialog({
             settings.baseUrl !== defaultSettings.baseUrl || settings.model !== defaultSettings.model
           }
         >
-          <summary>API 地址与模型</summary>
+          <summary>{t('settings.advanced')}</summary>
           <label className="api-setting-field">
-            API 地址
+            {t('settings.endpoint')}
             <input
               type="url"
               value={settings.baseUrl}
@@ -155,7 +183,7 @@ export function SettingsDialog({
             />
           </label>
           <label className="api-setting-field">
-            模型
+            {t('settings.model')}
             <input
               value={settings.model}
               required
@@ -175,7 +203,7 @@ export function SettingsDialog({
         {tested && (
           <p className="api-test-success" role="status">
             <Check size={16} />
-            连接成功，模型可用。
+            {t('settings.connected')}
           </p>
         )}
         <div className="api-settings-actions">
@@ -186,7 +214,7 @@ export function SettingsDialog({
               disabled={loading || Boolean(busy)}
               onClick={() => void submit('clear')}
             >
-              删除密钥
+              {t('settings.removeKey')}
             </button>
           )}
           <button
@@ -195,10 +223,12 @@ export function SettingsDialog({
             disabled={loading || Boolean(busy) || (!apiKey && !settings.hasKey)}
             onClick={() => void submit('test')}
           >
-            {busy === 'test' && <LoaderCircle className="spin" size={15} />}测试连接
+            {busy === 'test' && <LoaderCircle className="spin" size={15} />}
+            {t('settings.test')}
           </button>
           <button type="submit" className="button primary" disabled={loading || Boolean(busy)}>
-            {busy === 'save' && <LoaderCircle className="spin" size={15} />}保存
+            {busy === 'save' && <LoaderCircle className="spin" size={15} />}
+            {t('common.save')}
           </button>
         </div>
       </form>
